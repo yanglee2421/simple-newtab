@@ -6,5 +6,6 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
     matches: ["*://*/*"],
+    permissions: ["storage", "tabs"],
   },
 });

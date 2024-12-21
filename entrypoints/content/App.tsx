@@ -1,21 +1,16 @@
 import { ChevronRightOutlined, MenuOutlined } from "@mui/icons-material";
 import {
   Box,
-  createTheme,
-  CssBaseline,
   Divider,
   Drawer,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
   Slider,
   SpeedDial,
   SpeedDialAction,
   SpeedDialIcon,
-  ThemeProvider,
 } from "@mui/material";
 import React from "react";
+import { MuiProvider } from "@/components/MuiProvider";
 
 const UI = () => {
   const [open, setOpen] = React.useState(false);
@@ -75,17 +70,10 @@ const UI = () => {
   );
 };
 
-const theme = createTheme({
-  spacing(abs: number) {
-    return abs * 4;
-  },
-});
-
 export const App = () => {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <MuiProvider>
       <UI />
-    </ThemeProvider>
+    </MuiProvider>
   );
 };

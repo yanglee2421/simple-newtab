@@ -1,12 +1,4 @@
-import {
-  alpha,
-  Box,
-  createTheme,
-  CssBaseline,
-  Fab,
-  styled,
-  ThemeProvider,
-} from "@mui/material";
+import { alpha, Box, Fab, styled } from "@mui/material";
 import React from "react";
 import snowVillage from "./snowVillage.jpg";
 import { loadSlim } from "@tsparticles/slim";
@@ -14,6 +6,8 @@ import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSnowPreset } from "@tsparticles/preset-snow";
 import { useSyncStore } from "@/hooks/useSyncStore";
 import { SettingsOutlined } from "@mui/icons-material";
+import { browser } from "wxt/browser";
+import { MuiProvider } from "@/components/MuiProvider";
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
@@ -76,9 +70,13 @@ const SnowBg = () => {
           position: "absolute",
           bottom: 36,
           right: 36,
-          backgroundColor: theme.palette.action.focus,
+          backgroundColor: (theme) => theme.palette.action.focus,
         }}
-        onClick={() => set({ alpha: 100 - alphaVal })}
+        onClick={async () => {
+          set((d) => {
+            d.alpha = (d.alpha + 10) % 110;
+          });
+        }}
       >
         <SettingsOutlined color="action" />
       </Fab>
@@ -86,15 +84,14 @@ const SnowBg = () => {
   );
 };
 
-const theme = createTheme({ palette: { mode: "dark" } });
-
 export const App = () => {
+  console.log(browser);
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <MuiProvider>
       <React.Suspense>
         <SnowBg />
       </React.Suspense>
-    </ThemeProvider>
+    </MuiProvider>
   );
 };

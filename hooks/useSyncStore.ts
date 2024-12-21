@@ -49,7 +49,7 @@ export const useSyncStore = create<Store>()(
   ),
 );
 
-export const useLocaleStoreHasHydrated = () =>
+export const useSyncStoreHasHydrated = () =>
   React.useSyncExternalStore(
     (onStateChange) => useSyncStore.persist.onFinishHydration(onStateChange),
     () => useSyncStore.persist.hasHydrated(),

@@ -1,4 +1,4 @@
-import { App } from "@/app/content/App";
+import { App } from "./App";
 import createCache from "@emotion/cache";
 import React from "react";
 import { createRoot } from "react-dom/client";
