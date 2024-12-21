@@ -1,6 +1,6 @@
 {
   "name": "wxt-react-starter",
-  "description": "manifest.json description",
+  "description": "This is a simple extension that demonstrates how to use the Web Extension Tools (WXT) library.",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -27,6 +27,7 @@
     "immer": "^10.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router": "^7.1.0",
     "use-immer": "^0.11.0",
     "zustand": "^5.0.2"
   },

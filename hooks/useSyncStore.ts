@@ -7,6 +7,7 @@ import { WritableDraft } from "immer";
 
 type StoreState = {
   alpha: number;
+  lang: string;
 };
 
 type StoreActions = {
@@ -39,6 +40,7 @@ export const useSyncStore = create<Store>()(
       (set) => ({
         set,
         alpha: 0,
+        lang: "en",
       }),
     ),
     {
