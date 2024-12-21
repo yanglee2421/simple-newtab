@@ -7,6 +7,7 @@ import {
   useLocation,
   useParams,
 } from "react-router";
+import React from "react";
 import { Layout } from "./Layout";
 
 const LANGS = new Set(["en", "zh"]);
@@ -27,12 +28,19 @@ const routes: RouteObject[] = [
   {
     id: "root",
     path: ":lang?",
-    Component: () => {
+    Component() {
       const params = useParams();
       const langParams = params.lang;
       const langState = useSyncStore((s) => s.lang);
+      const set = useSyncStore((s) => s.set);
       const langMatched = getMatchedLang(langParams, langState);
       const location = useLocation();
+
+      React.useEffect(() => {
+        set((d) => {
+          d.lang = langMatched;
+        });
+      }, [langMatched, set]);
 
       if (langMatched !== langParams) {
         return (
@@ -58,12 +66,16 @@ const routes: RouteObject[] = [
       {
         id: "home",
         index: true,
-        Component: () => <div>Home</div>,
+        Component() {
+          return <div>Home</div>;
+        },
       },
       {
         id: "about",
         path: "about",
-        Component: () => <div>About</div>,
+        Component() {
+          return <div>About</div>;
+        },
       },
     ],
   },
