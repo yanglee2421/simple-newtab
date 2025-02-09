@@ -316,7 +316,7 @@ export const App = () => {
                     />
                   </RadioGroup>
                 </Grid2>
-                <Grid2 size={12}>
+                <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                   <FormLabel>Alpha</FormLabel>
                   <Slider
                     value={alphaVal}
@@ -331,7 +331,7 @@ export const App = () => {
                     valueLabelDisplay="auto"
                   />
                 </Grid2>
-                <Grid2 size={12}>
+                <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                   <FormLabel>Blur</FormLabel>
                   <Slider
                     value={blur}

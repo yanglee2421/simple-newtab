@@ -2,7 +2,7 @@
   "name": "wxt-react-starter",
   "description": "This is a simple extension that demonstrates how to use the Web Extension Tools (WXT) library.",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "wxt",
