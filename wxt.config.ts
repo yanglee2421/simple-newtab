@@ -9,5 +9,6 @@ export default defineConfig({
     permissions: ["storage", "tabs"],
     description:
       "This is a simple extension that demonstrates how to use the Web Extension Tools (WXT) library.",
+    name: "Simple Newtab",
   },
 });

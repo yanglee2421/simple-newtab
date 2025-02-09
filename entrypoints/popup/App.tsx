@@ -1,15 +1,30 @@
-import reactLogo from "@/assets/react.svg";
 import wxtLogo from "/wxt.svg";
-import { MuiProvider } from "@/components/MuiProvider";
 
-const reactLogoHref = new URL(reactLogo, import.meta.url).href;
+import {
+  Button,
+  Card,
+  CardActions,
+  CardContent,
+  CardHeader,
+  Typography,
+} from "@mui/material";
+
 const wxtLogoHref = new URL(wxtLogo, import.meta.url).href;
 
 export function App() {
   return (
-    <MuiProvider>
-      <img src={reactLogoHref} alt="" />
-      <img src={wxtLogoHref} alt="" />
-    </MuiProvider>
+    <Card sx={{ width: 300 }}>
+      <CardHeader
+        avatar={<img src={wxtLogoHref} width={28} alt="" />}
+        title="Simple Newtab"
+        subheader="Simple but not Simplistic"
+      />
+      <CardContent>
+        <Typography>Hello, welcome to Simple Newtab!</Typography>
+      </CardContent>
+      <CardActions>
+        <Button sx={{ display: "none" }}>Close</Button>
+      </CardActions>
+    </Card>
   );
 }
