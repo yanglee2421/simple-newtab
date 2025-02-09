@@ -4,10 +4,13 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Drawer,
   FormLabel,
   Grid2,
   IconButton,
   Slider,
+  Typography,
+  useTheme,
 } from "@mui/material";
 import React from "react";
 import snowVillage from "./snowVillage.jpg";
@@ -15,9 +18,9 @@ import { loadSlim } from "@tsparticles/slim";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSnowPreset } from "@tsparticles/preset-snow";
 import { useSyncStore } from "@/hooks/useSyncStore";
-import { SettingsOutlined } from "@mui/icons-material";
-import { browser } from "wxt/browser";
+import { CloseOutlined, SettingsOutlined } from "@mui/icons-material";
 import { MuiProvider } from "@/components/MuiProvider";
+import { useIndexedStore } from "@/hooks/useIndexedStore";
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
@@ -29,15 +32,15 @@ const snowNode = (
 
 const bgHref = new URL(snowVillage, import.meta.url).href;
 
-type BackgroundImageProps = { blur: number };
+type BackgroundImageProps = { blur: number; backgroundImage: string };
 
-const BackgroundImage = ({ blur }: BackgroundImageProps) => (
+const BackgroundImage = ({ blur, backgroundImage }: BackgroundImageProps) => (
   <Box
     sx={{
       position: "absolute",
       inset: -2 * blur,
       zIndex: 0,
-      backgroundImage: `url(${bgHref})`,
+      backgroundImage: `url(${backgroundImage})`,
       backgroundSize: "cover",
       filter: `blur(${blur}px)`,
     }}
@@ -61,13 +64,18 @@ const Mask = ({ alpha: alphaVal }: MaskProps) => (
 
 const MemoMask = React.memo(Mask);
 
-type SnowBgProps = React.PropsWithChildren;
+type SnowBgProps = React.PropsWithChildren<{
+  alpha: number;
+  blur: number;
+  backgroundImage: string;
+}>;
 
 const SnowBg = (props: SnowBgProps) => {
   React.use(particlesInit);
 
-  const alphaVal = useSyncStore((s) => s.alpha);
-  const blur = useSyncStore((s) => s.blur);
+  const alpha = React.useDeferredValue(props.alpha);
+  const blur = React.useDeferredValue(props.blur);
+  const backgroundImage = React.useDeferredValue(props.backgroundImage);
 
   return (
     <Box
@@ -75,17 +83,28 @@ const SnowBg = (props: SnowBgProps) => {
         position: "fixed",
         top: 0,
         left: 0,
-        width: "100%",
-        height: "100%",
+        inlineSize: "100%",
+        blockSize: "100%",
       }}
     >
-      <MemoBackgroundImage blur={blur} />
-      <MemoMask alpha={alphaVal} />
+      <MemoBackgroundImage blur={blur} backgroundImage={backgroundImage} />
+      <MemoMask alpha={alpha} />
       {snowNode}
-      <Box sx={{ position: "relative", zIndex: 2 }}>{props.children}</Box>
+      <Box
+        sx={{
+          position: "relative",
+          zIndex: 2,
+          inlineSize: "100%",
+          blockSize: "100%",
+        }}
+      >
+        {props.children}
+      </Box>
     </Box>
   );
 };
+
+const MemoSnowBg = React.memo(SnowBg);
 
 function onAnimationFrame(cb: () => void) {
   let animate = 0;
@@ -115,80 +134,160 @@ function getTimeString(locales?: Intl.LocalesArgument) {
   });
 }
 
+function useLocaleDate(locales?: Intl.LocalesArgument) {
+  return React.useSyncExternalStore(
+    onAnimationFrame,
+    () => getDateString(locales),
+    () => getDateString(locales)
+  );
+}
+
+function getDateString(locales?: Intl.LocalesArgument) {
+  return new Date().toLocaleDateString(locales, {
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "numeric",
+  });
+}
+
 const Clock = () => {
   const time = useLocaleTime();
+  const date = useLocaleDate();
+  const theme = useTheme();
 
-  return <time>{time}</time>;
+  return (
+    <Box sx={{ marginBlockStart: 28 }}>
+      <Typography
+        component={"time"}
+        variant="h1"
+        sx={{
+          color: theme.palette.common.white,
+          textAlign: "center",
+          display: "block",
+        }}
+      >
+        {time}
+      </Typography>
+      <Typography
+        component={"time"}
+        variant="subtitle1"
+        sx={{
+          color: theme.palette.common.white,
+          textAlign: "center",
+          display: "block",
+        }}
+      >
+        {date}
+      </Typography>
+    </Box>
+  );
 };
 
+const MemoClock = React.memo(Clock);
+
 export const App = () => {
-  console.log(browser);
+  const [show, setShow] = React.useState(false);
 
   const alphaVal = useSyncStore((s) => s.alpha);
   const blur = useSyncStore((s) => s.blur);
   const set = useSyncStore((s) => s.set);
+  const backgroundImage = useIndexedStore((s) => s.backgroundImage);
+  const setIndexed = useIndexedStore((s) => s.set);
+
+  const backgroundImageVal = backgroundImage || bgHref;
 
   return (
     <MuiProvider>
       <React.Suspense>
-        <Box
-          sx={{
-            position: "relative",
-            zIndex: (t) => t.zIndex.fab,
-            color: (t) => t.palette.primary.main,
-          }}
+        <MemoSnowBg
+          alpha={alphaVal}
+          blur={blur}
+          backgroundImage={backgroundImageVal}
         >
-          <Clock />
-        </Box>
-        <SnowBg>
-          <Card>
-            <CardHeader
-              action={
-                <IconButton
-                  onClick={async () => {
-                    set((d) => {
-                      d.alpha = (d.alpha + 10) % 110;
-                    });
-                  }}
-                >
-                  <SettingsOutlined color="action" />
-                </IconButton>
-              }
-            />
-            <CardContent>
-              <Grid2 container spacing={6}>
-                <Grid2 size={12}>
-                  <FormLabel>Alpha</FormLabel>
-                  <Slider
-                    value={alphaVal}
-                    onChange={(e, value) => {
-                      if (typeof value !== "number") return e;
-                      set((d) => {
-                        d.alpha = value;
-                      });
+          <Box sx={{ display: "flex", paddingInline: 5, paddingBlock: 3 }}>
+            <Box sx={{ marginInlineStart: "auto" }} />
+            <IconButton onClick={() => setShow(true)}>
+              <SettingsOutlined />
+            </IconButton>
+          </Box>
+          <MemoClock />
+          <Drawer open={show} onClose={() => setShow(false)} anchor="bottom">
+            <Card>
+              <CardHeader
+                title="Settings"
+                action={
+                  <IconButton
+                    onClick={() => {
+                      setShow(false);
                     }}
-                    max={100}
-                    min={0}
-                  />
+                  >
+                    <CloseOutlined color="error" />
+                  </IconButton>
+                }
+              />
+              <CardContent>
+                <Grid2 container spacing={6}>
+                  <Grid2 size={12}>
+                    <input type="color" />
+                  </Grid2>
+                  <Grid2 size={12}>
+                    <FormLabel>Background Image</FormLabel>
+                    <div>
+                      <input
+                        type="file"
+                        value={""}
+                        onChange={(e) => {
+                          const file = e.target.files?.item(0);
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (e) => {
+                            const data = e.target?.result;
+                            if (typeof data !== "string") return;
+                            setIndexed((d) => {
+                              d.backgroundImage = data;
+                            });
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </div>
+                  </Grid2>
+                  <Grid2 size={12}>
+                    <FormLabel>Alpha</FormLabel>
+                    <Slider
+                      value={alphaVal}
+                      onChange={(e, value) => {
+                        if (typeof value !== "number") return e;
+                        set((d) => {
+                          d.alpha = value;
+                        });
+                      }}
+                      max={100}
+                      min={0}
+                      valueLabelDisplay="auto"
+                    />
+                  </Grid2>
+                  <Grid2 size={12}>
+                    <FormLabel>Blur</FormLabel>
+                    <Slider
+                      value={blur}
+                      onChange={(e, value) => {
+                        if (typeof value !== "number") return e;
+                        set((d) => {
+                          d.blur = value;
+                        });
+                      }}
+                      max={100}
+                      min={0}
+                      valueLabelDisplay="auto"
+                    />
+                  </Grid2>
                 </Grid2>
-                <Grid2 size={12}>
-                  <FormLabel>Blur</FormLabel>
-                  <Slider
-                    value={blur}
-                    onChange={(e, value) => {
-                      if (typeof value !== "number") return e;
-                      set((d) => {
-                        d.blur = value;
-                      });
-                    }}
-                    max={100}
-                    min={0}
-                  />
-                </Grid2>
-              </Grid2>
-            </CardContent>
-          </Card>
-        </SnowBg>
+              </CardContent>
+            </Card>
+          </Drawer>
+        </MemoSnowBg>
       </React.Suspense>
     </MuiProvider>
   );
