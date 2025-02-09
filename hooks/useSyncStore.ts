@@ -7,6 +7,7 @@ import { WritableDraft } from "immer";
 
 type StoreState = {
   alpha: number;
+  blur: number;
   lang: string;
 };
 
@@ -15,7 +16,7 @@ type StoreActions = {
     nextStateOrUpdater:
       | StoreState
       | Partial<StoreState>
-      | ((state: WritableDraft<StoreState>) => void),
+      | ((state: WritableDraft<StoreState>) => void)
   ): void;
 };
 
@@ -36,24 +37,23 @@ const syncStorage = {
 
 export const useSyncStore = create<Store>()(
   persist(
-    immer(
-      (set) => ({
-        set,
-        alpha: 0,
-        lang: "en",
-      }),
-    ),
+    immer((set) => ({
+      set,
+      alpha: 0,
+      blur: 100,
+      lang: "en",
+    })),
     {
       name: "useSyncStore",
       storage: createJSONStorage(() => syncStorage),
       version: 2,
-    },
-  ),
+    }
+  )
 );
 
 export const useSyncStoreHasHydrated = () =>
   React.useSyncExternalStore(
     (onStateChange) => useSyncStore.persist.onFinishHydration(onStateChange),
     () => useSyncStore.persist.hasHydrated(),
-    () => false,
+    () => false
   );
