@@ -42,15 +42,15 @@ export const useSyncStore = create<Store>()(
   persist(
     immer((set) => ({
       set,
-      alpha: 0,
-      blur: 100,
+      alpha: 15,
+      blur: 15,
       lang: "en",
       preset: "snow",
     })),
     {
       name: "useSyncStore",
       storage: createJSONStorage(() => syncStorage),
-      version: 2,
+      version: 3,
     }
   )
 );

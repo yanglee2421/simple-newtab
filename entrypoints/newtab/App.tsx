@@ -5,6 +5,7 @@ import {
   CardContent,
   CardHeader,
   Drawer,
+  Fab,
   FormControlLabel,
   FormLabel,
   Grid2,
@@ -24,7 +25,6 @@ import { loadLinksPreset } from "@tsparticles/preset-links";
 import { loadBubblesPreset } from "@tsparticles/preset-bubbles";
 import { useSyncStore } from "@/hooks/useSyncStore";
 import { CloseOutlined, SettingsOutlined } from "@mui/icons-material";
-import { MuiProvider } from "@/components/MuiProvider";
 import { useIndexedStore } from "@/hooks/useIndexedStore";
 import type { Preset } from "@/hooks/useSyncStore";
 
@@ -57,6 +57,7 @@ const BackgroundImage = ({ blur, backgroundImage }: BackgroundImageProps) => (
       zIndex: 0,
       backgroundImage: `url(${backgroundImage})`,
       backgroundSize: "cover",
+      backgroundPosition: "50%",
       filter: `blur(${blur}px)`,
     }}
   />
@@ -212,133 +213,144 @@ export const App = () => {
   const set = useSyncStore((s) => s.set);
   const backgroundImage = useIndexedStore((s) => s.backgroundImage);
   const setIndexed = useIndexedStore((s) => s.set);
+  const theme = useTheme();
 
   const backgroundImageVal = backgroundImage || bgHref;
+  const muiBgColor = theme.palette.background.default;
 
   return (
-    <MuiProvider>
-      <React.Suspense>
-        <MemoSnowBg
-          alpha={alphaVal}
-          blur={blur}
-          backgroundImage={backgroundImageVal}
-          preset={preset}
-        >
-          <Box sx={{ display: "flex", paddingInline: 5, paddingBlock: 3 }}>
-            <Box sx={{ marginInlineStart: "auto" }} />
-            <IconButton onClick={() => setShow(true)}>
-              <SettingsOutlined />
-            </IconButton>
-          </Box>
-          <MemoClock />
-          <Drawer open={show} onClose={() => setShow(false)} anchor="bottom">
-            <Card>
-              <CardHeader
-                title="Settings"
-                action={
-                  <IconButton
-                    onClick={() => {
-                      setShow(false);
-                    }}
-                  >
-                    <CloseOutlined color="error" />
-                  </IconButton>
-                }
-              />
-              <CardContent>
-                <Grid2 container spacing={6}>
-                  <Grid2 size={12}>
-                    <input type="color" />
-                  </Grid2>
-                  <Grid2 size={12}>
-                    <FormLabel>Background Image</FormLabel>
-                    <div>
-                      <input
-                        type="file"
-                        value={""}
-                        onChange={(e) => {
-                          const file = e.target.files?.item(0);
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (e) => {
-                            const data = e.target?.result;
-                            if (typeof data !== "string") return;
-                            setIndexed((d) => {
-                              d.backgroundImage = data;
-                            });
-                          };
-                          reader.readAsDataURL(file);
-                        }}
-                      />
-                    </div>
-                  </Grid2>
-                  <Grid2 size={12}>
-                    <FormLabel>Preset</FormLabel>
-                    <RadioGroup
-                      value={preset}
-                      onChange={(e, value) => {
-                        void e;
-                        switch (value) {
-                          case "snow":
-                          case "links":
-                          case "bubbles":
-                            set((d) => {
-                              d.preset = value;
-                            });
-                        }
-                      }}
-                      row
-                    >
-                      <FormControlLabel
-                        control={<Radio value="snow" />}
-                        label="Snow"
-                      />
-                      <FormControlLabel
-                        control={<Radio value={"links"} />}
-                        label="Links"
-                      />
-                      <FormControlLabel
-                        control={<Radio value={"bubbles"} />}
-                        label="Bubbles"
-                      />
-                    </RadioGroup>
-                  </Grid2>
-                  <Grid2 size={12}>
-                    <FormLabel>Alpha</FormLabel>
-                    <Slider
-                      value={alphaVal}
-                      onChange={(e, value) => {
-                        if (typeof value !== "number") return e;
-                        set((d) => {
-                          d.alpha = value;
-                        });
-                      }}
-                      max={100}
-                      min={0}
-                      valueLabelDisplay="auto"
-                    />
-                  </Grid2>
-                  <Grid2 size={12}>
-                    <FormLabel>Blur</FormLabel>
-                    <Slider
-                      value={blur}
-                      onChange={(e, value) => {
-                        if (typeof value !== "number") return e;
-                        set((d) => {
-                          d.blur = value;
-                        });
-                      }}
-                      max={100}
-                      min={0}
-                      valueLabelDisplay="auto"
-                    />
-                  </Grid2>
+    <React.Suspense>
+      <MemoSnowBg
+        alpha={alphaVal}
+        blur={blur}
+        backgroundImage={backgroundImageVal}
+        preset={preset}
+      >
+        <Box sx={{ display: "flex", paddingInline: 5, paddingBlock: 3 }}>
+          <Box sx={{ marginInlineStart: "auto" }} />
+          <Fab
+            onClick={() => setShow(true)}
+            color="inherit"
+            sx={{
+              backdropFilter: "blur(20px)",
+              backgroundColor: alpha(muiBgColor, 0.6),
+              color: theme.palette.getContrastText(alpha(muiBgColor, 0.6)),
+              "&:hover": {
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <SettingsOutlined color="inherit" />
+          </Fab>
+        </Box>
+        <MemoClock />
+        <Drawer open={show} onClose={() => setShow(false)} anchor="bottom">
+          <Card>
+            <CardHeader
+              title="Settings"
+              action={
+                <IconButton
+                  onClick={() => {
+                    setShow(false);
+                  }}
+                >
+                  <CloseOutlined color="error" />
+                </IconButton>
+              }
+            />
+            <CardContent>
+              <Grid2 container spacing={6}>
+                <Grid2 size={12}>
+                  <input type="color" />
                 </Grid2>
-              </CardContent>
-            </Card>
-          </Drawer>
-        </MemoSnowBg>
-      </React.Suspense>
-    </MuiProvider>
+                <Grid2 size={12}>
+                  <FormLabel>Background Image</FormLabel>
+                  <div>
+                    <input
+                      type="file"
+                      value={""}
+                      onChange={(e) => {
+                        const file = e.target.files?.item(0);
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                          const data = e.target?.result;
+                          if (typeof data !== "string") return;
+                          setIndexed((d) => {
+                            d.backgroundImage = data;
+                          });
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </div>
+                </Grid2>
+                <Grid2 size={12}>
+                  <FormLabel>Preset</FormLabel>
+                  <RadioGroup
+                    value={preset}
+                    onChange={(e, value) => {
+                      void e;
+                      switch (value) {
+                        case "snow":
+                        case "links":
+                        case "bubbles":
+                          set((d) => {
+                            d.preset = value;
+                          });
+                      }
+                    }}
+                    row
+                  >
+                    <FormControlLabel
+                      control={<Radio value="snow" />}
+                      label="Snow"
+                    />
+                    <FormControlLabel
+                      control={<Radio value={"links"} />}
+                      label="Links"
+                    />
+                    <FormControlLabel
+                      control={<Radio value={"bubbles"} />}
+                      label="Bubbles"
+                    />
+                  </RadioGroup>
+                </Grid2>
+                <Grid2 size={12}>
+                  <FormLabel>Alpha</FormLabel>
+                  <Slider
+                    value={alphaVal}
+                    onChange={(e, value) => {
+                      if (typeof value !== "number") return e;
+                      set((d) => {
+                        d.alpha = value;
+                      });
+                    }}
+                    max={100}
+                    min={0}
+                    valueLabelDisplay="auto"
+                  />
+                </Grid2>
+                <Grid2 size={12}>
+                  <FormLabel>Blur</FormLabel>
+                  <Slider
+                    value={blur}
+                    onChange={(e, value) => {
+                      if (typeof value !== "number") return e;
+                      set((d) => {
+                        d.blur = value;
+                      });
+                    }}
+                    max={100}
+                    min={0}
+                    valueLabelDisplay="auto"
+                  />
+                </Grid2>
+              </Grid2>
+            </CardContent>
+          </Card>
+        </Drawer>
+      </MemoSnowBg>
+    </React.Suspense>
   );
 };
