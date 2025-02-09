@@ -5,10 +5,13 @@ import React from "react";
 import { browser } from "wxt/browser";
 import { WritableDraft } from "immer";
 
+export type Preset = "links" | "snow" | "bubbles";
+
 type StoreState = {
   alpha: number;
   blur: number;
   lang: string;
+  preset: Preset;
 };
 
 type StoreActions = {
@@ -42,6 +45,7 @@ export const useSyncStore = create<Store>()(
       alpha: 0,
       blur: 100,
       lang: "en",
+      preset: "snow",
     })),
     {
       name: "useSyncStore",

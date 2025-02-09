@@ -26,6 +26,12 @@ importers:
       '@tsparticles/engine':
         specifier: ^3.8.1
         version: 3.8.1
+      '@tsparticles/preset-bubbles':
+        specifier: ^3.2.0
+        version: 3.2.0
+      '@tsparticles/preset-links':
+        specifier: ^3.2.0
+        version: 3.2.0
       '@tsparticles/preset-snow':
         specifier: ^3.2.0
         version: 3.2.0
@@ -915,6 +921,9 @@ packages:
   '@tsparticles/plugin-easing-quad@3.8.1':
     resolution: {integrity: sha512-+BiPNHgsNbbh0AhWKjrmJaAu5c37naqjbME8ZYl0BClI0AC5AzBUaezYRxECaLrdtHJvKrZXFMr6Q0sxjDc6QQ==}
 
+  '@tsparticles/plugin-emitters@3.8.1':
+    resolution: {integrity: sha512-PGldE3OHs1hsZM6a8qHpXvKIMhaWAqZNwq8v7FwgJGxikXVvYtkKSaWslTpID3hYvtB6+whKig2uWURmq2TUsg==}
+
   '@tsparticles/plugin-hex-color@3.8.1':
     resolution: {integrity: sha512-AmgB7XIYBCvg5HcqYb19YpcjEx2k4DpU2e24n0rradDDeqKKcz7EWI/08FlAnDb5HUs1em63vaAanl1vdm3+OA==}
 
@@ -923,6 +932,12 @@ packages:
 
   '@tsparticles/plugin-rgb-color@3.8.1':
     resolution: {integrity: sha512-xNLqnaFUYjU+7dCHQXjZdM4UojUAVorPVmXlYmkh1xmujLljEaFTwCg1UJVlNq+fXENIFkeaf3/XT0U/q0ZBTA==}
+
+  '@tsparticles/preset-bubbles@3.2.0':
+    resolution: {integrity: sha512-xYPnCQhrvu4GuLy7RAOex6sIuu96mwCaY80JlnuugxW0fNCCcxi1C0I1pwQvbUsKO2qUb3fKkkefKGQHdnn2Hg==}
+
+  '@tsparticles/preset-links@3.2.0':
+    resolution: {integrity: sha512-F4nddhEzMSiZZzIizXcb6jMbHEC7+hAwzrUph1OiRvHWnLeo13pDG0DdYIKhY15xC6cZP0IMZq7wzIUkyPJ1ew==}
 
   '@tsparticles/preset-snow@3.2.0':
     resolution: {integrity: sha512-S/nxsNSBgRG8nkeYePXLGdZ0I5ysJ5AelcWYlGxxWx0b6qurAw8NvyfQd7+GXuj6kaS/5+aay71L2apf1WG/yQ==}
@@ -3939,6 +3954,10 @@ snapshots:
     dependencies:
       '@tsparticles/engine': 3.8.1
 
+  '@tsparticles/plugin-emitters@3.8.1':
+    dependencies:
+      '@tsparticles/engine': 3.8.1
+
   '@tsparticles/plugin-hex-color@3.8.1':
     dependencies:
       '@tsparticles/engine': 3.8.1
@@ -3950,6 +3969,18 @@ snapshots:
   '@tsparticles/plugin-rgb-color@3.8.1':
     dependencies:
       '@tsparticles/engine': 3.8.1
+
+  '@tsparticles/preset-bubbles@3.2.0':
+    dependencies:
+      '@tsparticles/basic': 3.8.1
+      '@tsparticles/engine': 3.8.1
+      '@tsparticles/plugin-emitters': 3.8.1
+
+  '@tsparticles/preset-links@3.2.0':
+    dependencies:
+      '@tsparticles/basic': 3.8.1
+      '@tsparticles/engine': 3.8.1
+      '@tsparticles/interaction-particles-links': 3.8.1
 
   '@tsparticles/preset-snow@3.2.0':
     dependencies:

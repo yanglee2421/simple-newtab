@@ -5,9 +5,12 @@ import {
   CardContent,
   CardHeader,
   Drawer,
+  FormControlLabel,
   FormLabel,
   Grid2,
   IconButton,
+  Radio,
+  RadioGroup,
   Slider,
   Typography,
   useTheme,
@@ -17,18 +20,30 @@ import snowVillage from "./snowVillage.jpg";
 import { loadSlim } from "@tsparticles/slim";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSnowPreset } from "@tsparticles/preset-snow";
+import { loadLinksPreset } from "@tsparticles/preset-links";
+import { loadBubblesPreset } from "@tsparticles/preset-bubbles";
 import { useSyncStore } from "@/hooks/useSyncStore";
 import { CloseOutlined, SettingsOutlined } from "@mui/icons-material";
 import { MuiProvider } from "@/components/MuiProvider";
 import { useIndexedStore } from "@/hooks/useIndexedStore";
+import type { Preset } from "@/hooks/useSyncStore";
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
+  await loadLinksPreset(e);
+  await loadBubblesPreset(e);
   await loadSlim(e);
 });
-const snowNode = (
-  <Particles options={{ preset: "snow", background: { opacity: 0 } }} />
+
+type ParticleProps = {
+  preset: Preset;
+};
+
+const Particle = (props: ParticleProps) => (
+  <Particles options={{ preset: props.preset, background: { opacity: 0 } }} />
 );
+
+const MemoParticle = React.memo(Particle);
 
 const bgHref = new URL(snowVillage, import.meta.url).href;
 
@@ -56,7 +71,7 @@ const Mask = ({ alpha: alphaVal }: MaskProps) => (
     sx={{
       position: "absolute",
       inset: 0,
-      zIndex: 1,
+      zIndex: 0,
       backgroundColor: (t) => alpha(t.palette.common.black, alphaVal / 100),
     }}
   />
@@ -68,6 +83,7 @@ type SnowBgProps = React.PropsWithChildren<{
   alpha: number;
   blur: number;
   backgroundImage: string;
+  preset: Preset;
 }>;
 
 const SnowBg = (props: SnowBgProps) => {
@@ -76,6 +92,7 @@ const SnowBg = (props: SnowBgProps) => {
   const alpha = React.useDeferredValue(props.alpha);
   const blur = React.useDeferredValue(props.blur);
   const backgroundImage = React.useDeferredValue(props.backgroundImage);
+  const preset = React.useDeferredValue(props.preset);
 
   return (
     <Box
@@ -89,7 +106,7 @@ const SnowBg = (props: SnowBgProps) => {
     >
       <MemoBackgroundImage blur={blur} backgroundImage={backgroundImage} />
       <MemoMask alpha={alpha} />
-      {snowNode}
+      <MemoParticle preset={preset} />
       <Box
         sx={{
           position: "relative",
@@ -191,6 +208,7 @@ export const App = () => {
 
   const alphaVal = useSyncStore((s) => s.alpha);
   const blur = useSyncStore((s) => s.blur);
+  const preset = useSyncStore((s) => s.preset);
   const set = useSyncStore((s) => s.set);
   const backgroundImage = useIndexedStore((s) => s.backgroundImage);
   const setIndexed = useIndexedStore((s) => s.set);
@@ -204,6 +222,7 @@ export const App = () => {
           alpha={alphaVal}
           blur={blur}
           backgroundImage={backgroundImageVal}
+          preset={preset}
         >
           <Box sx={{ display: "flex", paddingInline: 5, paddingBlock: 3 }}>
             <Box sx={{ marginInlineStart: "auto" }} />
@@ -252,6 +271,37 @@ export const App = () => {
                         }}
                       />
                     </div>
+                  </Grid2>
+                  <Grid2 size={12}>
+                    <FormLabel>Preset</FormLabel>
+                    <RadioGroup
+                      value={preset}
+                      onChange={(e, value) => {
+                        void e;
+                        switch (value) {
+                          case "snow":
+                          case "links":
+                          case "bubbles":
+                            set((d) => {
+                              d.preset = value;
+                            });
+                        }
+                      }}
+                      row
+                    >
+                      <FormControlLabel
+                        control={<Radio value="snow" />}
+                        label="Snow"
+                      />
+                      <FormControlLabel
+                        control={<Radio value={"links"} />}
+                        label="Links"
+                      />
+                      <FormControlLabel
+                        control={<Radio value={"bubbles"} />}
+                        label="Bubbles"
+                      />
+                    </RadioGroup>
                   </Grid2>
                   <Grid2 size={12}>
                     <FormLabel>Alpha</FormLabel>
