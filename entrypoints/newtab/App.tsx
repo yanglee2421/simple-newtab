@@ -206,6 +206,7 @@ const MemoClock = React.memo(Clock);
 
 export const App = () => {
   const [show, setShow] = React.useState(false);
+  const [href, setHref] = React.useState("");
 
   const alphaVal = useSyncStore((s) => s.alpha);
   const blur = useSyncStore((s) => s.blur);
@@ -215,7 +216,16 @@ export const App = () => {
   const setIndexed = useIndexedStore((s) => s.set);
   const theme = useTheme();
 
-  const backgroundImageVal = backgroundImage || bgHref;
+  React.useEffect(() => {
+    const val = base64ToObjectUrl(backgroundImage);
+    setHref(val);
+
+    return () => {
+      URL.revokeObjectURL(val);
+    };
+  }, [backgroundImage]);
+
+  const backgroundImageVal = href || bgHref;
   const muiBgColor = theme.palette.background.default;
 
   return (
@@ -354,3 +364,18 @@ export const App = () => {
     </React.Suspense>
   );
 };
+
+function base64ToObjectUrl(base64: string): string {
+  try {
+    const binary = atob(base64.split(",")[1]);
+    const array = [];
+    for (let i = 0; i < binary.length; i++) {
+      array.push(binary.charCodeAt(i));
+    }
+    const blob = new Blob([new Uint8Array(array)], { type: "image/jpeg" });
+    return URL.createObjectURL(blob);
+  } catch (error) {
+    console.error(error);
+    return "";
+  }
+}
