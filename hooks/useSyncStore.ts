@@ -43,7 +43,7 @@ export const useSyncStore = create<Store>()(
     immer((set) => ({
       set,
       alpha: 15,
-      blur: 15,
+      blur: 4,
       lang: "en",
       preset: "snow",
     })),

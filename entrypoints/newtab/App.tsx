@@ -1,7 +1,6 @@
 import {
   alpha,
   Box,
-  Card,
   CardContent,
   CardHeader,
   Drawer,
@@ -256,110 +255,108 @@ export const App = () => {
         </Box>
         <MemoClock />
         <Drawer open={show} onClose={() => setShow(false)} anchor="bottom">
-          <Card>
-            <CardHeader
-              title="Settings"
-              action={
-                <IconButton
-                  onClick={() => {
-                    setShow(false);
-                  }}
-                >
-                  <CloseOutlined color="error" />
-                </IconButton>
-              }
-            />
-            <CardContent>
-              <Grid2 container spacing={6}>
-                <Grid2 size={12}>
-                  <input type="color" />
-                </Grid2>
-                <Grid2 size={12}>
-                  <FormLabel>Background Image</FormLabel>
-                  <div>
-                    <input
-                      type="file"
-                      value={""}
-                      onChange={(e) => {
-                        const file = e.target.files?.item(0);
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                          const data = e.target?.result;
-                          if (typeof data !== "string") return;
-                          setIndexed((d) => {
-                            d.backgroundImage = data;
-                          });
-                        };
-                        reader.readAsDataURL(file);
-                      }}
-                    />
-                  </div>
-                </Grid2>
-                <Grid2 size={12}>
-                  <FormLabel>Preset</FormLabel>
-                  <RadioGroup
-                    value={preset}
-                    onChange={(e, value) => {
-                      void e;
-                      switch (value) {
-                        case "snow":
-                        case "links":
-                        case "bubbles":
-                          set((d) => {
-                            d.preset = value;
-                          });
-                      }
-                    }}
-                    row
-                  >
-                    <FormControlLabel
-                      control={<Radio value="snow" />}
-                      label="Snow"
-                    />
-                    <FormControlLabel
-                      control={<Radio value={"links"} />}
-                      label="Links"
-                    />
-                    <FormControlLabel
-                      control={<Radio value={"bubbles"} />}
-                      label="Bubbles"
-                    />
-                  </RadioGroup>
-                </Grid2>
-                <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-                  <FormLabel>Alpha</FormLabel>
-                  <Slider
-                    value={alphaVal}
-                    onChange={(e, value) => {
-                      if (typeof value !== "number") return e;
-                      set((d) => {
-                        d.alpha = value;
-                      });
-                    }}
-                    max={100}
-                    min={0}
-                    valueLabelDisplay="auto"
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-                  <FormLabel>Blur</FormLabel>
-                  <Slider
-                    value={blur}
-                    onChange={(e, value) => {
-                      if (typeof value !== "number") return e;
-                      set((d) => {
-                        d.blur = value;
-                      });
-                    }}
-                    max={100}
-                    min={0}
-                    valueLabelDisplay="auto"
-                  />
-                </Grid2>
+          <CardHeader
+            title="Settings"
+            action={
+              <IconButton
+                onClick={() => {
+                  setShow(false);
+                }}
+              >
+                <CloseOutlined color="error" />
+              </IconButton>
+            }
+          />
+          <CardContent>
+            <Grid2 container spacing={6}>
+              <Grid2 size={12}>
+                <input type="color" />
               </Grid2>
-            </CardContent>
-          </Card>
+              <Grid2 size={12}>
+                <FormLabel>Background Image</FormLabel>
+                <div>
+                  <input
+                    type="file"
+                    value={""}
+                    onChange={(e) => {
+                      const file = e.target.files?.item(0);
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (e) => {
+                        const data = e.target?.result;
+                        if (typeof data !== "string") return;
+                        setIndexed((d) => {
+                          d.backgroundImage = data;
+                        });
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </div>
+              </Grid2>
+              <Grid2 size={12}>
+                <FormLabel>Preset</FormLabel>
+                <RadioGroup
+                  value={preset}
+                  onChange={(e, value) => {
+                    void e;
+                    switch (value) {
+                      case "snow":
+                      case "links":
+                      case "bubbles":
+                        set((d) => {
+                          d.preset = value;
+                        });
+                    }
+                  }}
+                  row
+                >
+                  <FormControlLabel
+                    control={<Radio value="snow" />}
+                    label="Snow"
+                  />
+                  <FormControlLabel
+                    control={<Radio value={"links"} />}
+                    label="Links"
+                  />
+                  <FormControlLabel
+                    control={<Radio value={"bubbles"} />}
+                    label="Bubbles"
+                  />
+                </RadioGroup>
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+                <FormLabel>Alpha</FormLabel>
+                <Slider
+                  value={alphaVal}
+                  onChange={(e, value) => {
+                    if (typeof value !== "number") return e;
+                    set((d) => {
+                      d.alpha = value;
+                    });
+                  }}
+                  max={100}
+                  min={0}
+                  valueLabelDisplay="auto"
+                />
+              </Grid2>
+              <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+                <FormLabel>Blur</FormLabel>
+                <Slider
+                  value={blur}
+                  onChange={(e, value) => {
+                    if (typeof value !== "number") return e;
+                    set((d) => {
+                      d.blur = value;
+                    });
+                  }}
+                  max={100}
+                  min={0}
+                  valueLabelDisplay="auto"
+                />
+              </Grid2>
+            </Grid2>
+          </CardContent>
         </Drawer>
       </MemoSnowBg>
     </React.Suspense>

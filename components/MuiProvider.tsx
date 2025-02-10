@@ -1,8 +1,8 @@
 import { ThemeProvider } from "@emotion/react";
-import { alpha, createTheme, CssBaseline } from "@mui/material";
+import { createTheme, CssBaseline } from "@mui/material";
 import React from "react";
 
-const lightBg = alpha("#fff", 0.6);
+const lightBg = "rgba(243, 243, 243, .85)";
 
 const theme = createTheme({
   spacing(abs: number) {
@@ -15,9 +15,20 @@ const theme = createTheme({
       paper: lightBg,
     },
   },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backdropFilter: "saturate(3) blur(20px)",
+          backgroundImage: "none",
+        },
+      },
+    },
+  },
 });
 
-const darkBg = alpha("#000", 0.6);
+const darkDefault = "rgba(32, 32, 32, .75)";
+const darkPaper = "rgba(36, 36, 36, .8)";
 
 const darkTheme = createTheme({
   spacing(abs: number) {
@@ -26,8 +37,18 @@ const darkTheme = createTheme({
   palette: {
     mode: "dark",
     background: {
-      default: darkBg,
-      paper: darkBg,
+      default: darkDefault,
+      paper: darkPaper,
+    },
+  },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backdropFilter: "saturate(3) blur(20px)",
+          backgroundImage: "none",
+        },
+      },
     },
   },
 });
