@@ -249,6 +249,7 @@ export const App = () => {
                 backgroundColor: theme.palette.action.hover,
               },
             }}
+            size="small"
           >
             <SettingsOutlined color="inherit" />
           </Fab>

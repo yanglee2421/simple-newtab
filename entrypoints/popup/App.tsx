@@ -1,11 +1,13 @@
+import { SettingsOutlined } from "@mui/icons-material";
 import wxtLogo from "/wxt.svg";
-
+import { browser } from "wxt/browser";
 import {
   Button,
   Card,
   CardActions,
   CardContent,
   CardHeader,
+  IconButton,
   Typography,
 } from "@mui/material";
 
@@ -18,6 +20,11 @@ export function App() {
         avatar={<img src={wxtLogoHref} width={28} alt="" />}
         title="Simple Newtab"
         subheader="Simple but not Simplistic"
+        action={
+          <IconButton onClick={() => browser.runtime.openOptionsPage()}>
+            <SettingsOutlined />
+          </IconButton>
+        }
       />
       <CardContent>
         <Typography>Hello, welcome to Simple Newtab!</Typography>
