@@ -8,3 +8,11 @@ export function base64ToObjectUrl(base64: string): string {
   const blob = new Blob([new Uint8Array(array)], { type: "image/jpeg" });
   return URL.createObjectURL(blob);
 }
+
+export const calc = (
+  totalWidth: number,
+  columns: number,
+  span: number,
+  columnSpacing: number
+) =>
+  (totalWidth * span) / columns - (columns - span) * (columnSpacing / columns);
