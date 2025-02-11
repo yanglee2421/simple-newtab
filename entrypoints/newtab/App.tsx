@@ -49,17 +49,19 @@ const bgHref = new URL(snowVillage, import.meta.url).href;
 type BackgroundImageProps = { blur: number; backgroundImage: string };
 
 const BackgroundImage = ({ blur, backgroundImage }: BackgroundImageProps) => (
-  <Box
-    sx={{
-      position: "absolute",
-      inset: -2 * blur,
-      zIndex: 0,
-      backgroundImage: `url(${backgroundImage})`,
-      backgroundSize: "cover",
-      backgroundPosition: "50%",
-      filter: `blur(${blur}px)`,
-    }}
-  />
+  <Box sx={{ position: "fixed", inset: 0 }}>
+    <Box
+      sx={{
+        position: "fixed",
+        inset: -2 * blur,
+        zIndex: 0,
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "50%",
+        filter: `blur(${blur}px)`,
+      }}
+    />
+  </Box>
 );
 
 const MemoBackgroundImage = React.memo(BackgroundImage);
@@ -69,24 +71,24 @@ type MaskProps = { alpha: number };
 const Mask = ({ alpha: alphaVal }: MaskProps) => (
   <Box
     sx={{
-      position: "absolute",
+      position: "fixed",
       inset: 0,
       zIndex: 0,
-      backgroundColor: (t) => alpha(t.palette.common.black, alphaVal / 100),
+      backgroundColor: `rgba(0,0,0,${alphaVal / 100})`,
     }}
   />
 );
 
 const MemoMask = React.memo(Mask);
 
-type SnowBgProps = React.PropsWithChildren<{
+type SnowBgProps = {
   alpha: number;
   blur: number;
   backgroundImage: string;
   preset: Preset;
-}>;
+};
 
-const SnowBg = (props: SnowBgProps) => {
+const Background = (props: SnowBgProps) => {
   React.use(particlesInit);
 
   const alpha = React.useDeferredValue(props.alpha);
@@ -95,33 +97,15 @@ const SnowBg = (props: SnowBgProps) => {
   const preset = React.useDeferredValue(props.preset);
 
   return (
-    <Box
-      sx={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        inlineSize: "100%",
-        blockSize: "100%",
-      }}
-    >
+    <>
       <MemoBackgroundImage blur={blur} backgroundImage={backgroundImage} />
       <MemoMask alpha={alpha} />
       <MemoParticle preset={preset} />
-      <Box
-        sx={{
-          position: "relative",
-          zIndex: 2,
-          inlineSize: "100%",
-          blockSize: "100%",
-        }}
-      >
-        {props.children}
-      </Box>
-    </Box>
+    </>
   );
 };
 
-const MemoSnowBg = React.memo(SnowBg);
+const MemoBackground = React.memo(Background);
 
 function onAnimationFrame(cb: () => void) {
   let animate = 0;
@@ -229,11 +213,19 @@ export const App = () => {
 
   return (
     <React.Suspense>
-      <MemoSnowBg
+      <MemoBackground
         alpha={alphaVal}
         blur={blur}
         backgroundImage={backgroundImageVal}
         preset={preset}
+      />
+      <Box
+        sx={{
+          position: "relative",
+          zIndex: 1,
+          inlineSize: "100%",
+          blockSize: "100%",
+        }}
       >
         <Box sx={{ display: "flex", paddingInline: 5, paddingBlock: 3 }}>
           <Box sx={{ marginInlineStart: "auto" }} />
@@ -358,7 +350,7 @@ export const App = () => {
             </Grid2>
           </CardContent>
         </Drawer>
-      </MemoSnowBg>
+      </Box>
     </React.Suspense>
   );
 };
