@@ -6,7 +6,7 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
     matches: ["*://*/*"],
-    permissions: ["storage", "tabs"],
+    permissions: ["storage", "tabs", "topSites"],
     name: "Simple Newtab",
   },
 });

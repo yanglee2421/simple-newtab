@@ -9,6 +9,9 @@ import {
   FormLabel,
   Grid2,
   IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
   Radio,
   RadioGroup,
   Slider,
@@ -22,10 +25,47 @@ import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSnowPreset } from "@tsparticles/preset-snow";
 import { loadLinksPreset } from "@tsparticles/preset-links";
 import { loadBubblesPreset } from "@tsparticles/preset-bubbles";
-import { useSyncStore } from "@/hooks/useSyncStore";
-import { CloseOutlined, SettingsOutlined } from "@mui/icons-material";
+import * as SyncStore from "@/hooks/useSyncStore";
+import {
+  CloseOutlined,
+  RestoreOutlined,
+  SettingsOutlined,
+} from "@mui/icons-material";
 import { useIndexedStore } from "@/hooks/useIndexedStore";
 import type { Preset } from "@/hooks/useSyncStore";
+import { base64ToObjectUrl } from "@/lib/utils";
+import { browser } from "wxt/browser";
+import type { TopSites } from "wxt/browser";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+
+const fetchTopSites = (options?: TopSites.GetOptionsType) =>
+  queryOptions({
+    queryKey: ["browser.topSites.get", options],
+    queryFn() {
+      if (!options) return browser.topSites.get();
+      return browser.topSites.get(options);
+    },
+  });
+
+const TopSitesUI = () => {
+  const topSites = useQuery(fetchTopSites());
+
+  if (topSites.isPending) return null;
+
+  if (topSites.isError) return null;
+
+  return (
+    <List>
+      {topSites.data.map((i) => (
+        <ListItemButton key={i.url} href={i.url}>
+          <ListItemText primary={i.title} />
+        </ListItemButton>
+      ))}
+    </List>
+  );
+};
+
+const MemoTopSites = React.memo(TopSitesUI);
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
@@ -187,6 +227,8 @@ const Clock = () => {
 
 const MemoClock = React.memo(Clock);
 
+const useSyncStore = SyncStore.useSyncStore;
+
 export const App = () => {
   const [show, setShow] = React.useState(false);
   const [href, setHref] = React.useState("");
@@ -250,13 +292,30 @@ export const App = () => {
           <CardHeader
             title="Settings"
             action={
-              <IconButton
-                onClick={() => {
-                  setShow(false);
-                }}
-              >
-                <CloseOutlined color="error" />
-              </IconButton>
+              <>
+                <IconButton
+                  onClick={() => {
+                    set((d) => {
+                      d.alpha = SyncStore.alpha;
+                      d.blur = SyncStore.blur;
+                      d.lang = SyncStore.lang;
+                      d.preset = SyncStore.preset;
+                    });
+                    setIndexed((d) => {
+                      d.backgroundImage = "";
+                    });
+                  }}
+                >
+                  <RestoreOutlined />
+                </IconButton>
+                <IconButton
+                  onClick={() => {
+                    setShow(false);
+                  }}
+                >
+                  <CloseOutlined color="error" />
+                </IconButton>
+              </>
             }
           />
           <CardContent>
@@ -351,21 +410,7 @@ export const App = () => {
           </CardContent>
         </Drawer>
       </Box>
+      <MemoTopSites />
     </React.Suspense>
   );
 };
-
-function base64ToObjectUrl(base64: string): string {
-  try {
-    const binary = atob(base64.split(",")[1]);
-    const array = [];
-    for (let i = 0; i < binary.length; i++) {
-      array.push(binary.charCodeAt(i));
-    }
-    const blob = new Blob([new Uint8Array(array)], { type: "image/jpeg" });
-    return URL.createObjectURL(blob);
-  } catch (error) {
-    console.error(error);
-    return "";
-  }
-}

@@ -38,14 +38,19 @@ const syncStorage = {
   },
 };
 
+export const alpha = 15;
+export const blur = 4;
+export const lang = "en";
+export const preset = "snow";
+
 export const useSyncStore = create<Store>()(
   persist(
     immer((set) => ({
       set,
-      alpha: 15,
-      blur: 4,
-      lang: "en",
-      preset: "snow",
+      alpha,
+      blur,
+      lang,
+      preset,
     })),
     {
       name: "useSyncStore",
