@@ -198,7 +198,7 @@ const Clock = () => {
   const theme = useTheme();
 
   return (
-    <Box sx={{ marginBlockStart: 28 }}>
+    <Box>
       <Typography
         component={"time"}
         variant="h1"
@@ -226,6 +226,34 @@ const Clock = () => {
 };
 
 const MemoClock = React.memo(Clock);
+
+const Content = () => {
+  return (
+    <Box
+      sx={{
+        position: "relative",
+        zIndex: 1,
+        inlineSize: "100dvw",
+        blockSize: "100dvh",
+
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Box
+        sx={{
+          marginBlockStart: "calc(100dvh/55*21)",
+          transform: "translate3d(0,-50%,0)",
+        }}
+      >
+        <MemoClock />
+        <MemoTopSites />
+      </Box>
+    </Box>
+  );
+};
+
+const MemoContent = React.memo(Content);
 
 const useSyncStore = SyncStore.useSyncStore;
 
@@ -261,156 +289,156 @@ export const App = () => {
         backgroundImage={backgroundImageVal}
         preset={preset}
       />
-      <Box
+      <MemoContent />
+      <Fab
+        onClick={() => setShow(true)}
+        color="inherit"
         sx={{
-          position: "relative",
-          zIndex: 1,
-          inlineSize: "100%",
-          blockSize: "100%",
+          backdropFilter: "blur(20px)",
+          backgroundColor: alpha(muiBgColor, 0.6),
+          color: theme.palette.getContrastText(alpha(muiBgColor, 0.6)),
+          "&:hover": {
+            backgroundColor: theme.palette.action.hover,
+          },
+
+          position: "fixed",
+          insetInlineEnd: 12,
+          insetBlockStart: 12,
         }}
+        size="small"
       >
-        <Box sx={{ display: "flex", paddingInline: 5, paddingBlock: 3 }}>
-          <Box sx={{ marginInlineStart: "auto" }} />
-          <Fab
-            onClick={() => setShow(true)}
-            color="inherit"
-            sx={{
-              backdropFilter: "blur(20px)",
-              backgroundColor: alpha(muiBgColor, 0.6),
-              color: theme.palette.getContrastText(alpha(muiBgColor, 0.6)),
-              "&:hover": {
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
-            size="small"
-          >
-            <SettingsOutlined color="inherit" />
-          </Fab>
-        </Box>
-        <MemoClock />
-        <Drawer open={show} onClose={() => setShow(false)} anchor="bottom">
-          <CardHeader
-            title="Settings"
-            action={
-              <>
-                <IconButton
-                  onClick={() => {
-                    set((d) => {
-                      d.alpha = SyncStore.alpha;
-                      d.blur = SyncStore.blur;
-                      d.lang = SyncStore.lang;
-                      d.preset = SyncStore.preset;
-                    });
-                    setIndexed((d) => {
-                      d.backgroundImage = "";
-                    });
-                  }}
-                >
-                  <RestoreOutlined />
-                </IconButton>
-                <IconButton
-                  onClick={() => {
-                    setShow(false);
-                  }}
-                >
-                  <CloseOutlined color="error" />
-                </IconButton>
-              </>
-            }
-          />
-          <CardContent>
-            <Grid2 container spacing={6}>
-              <Grid2 size={12}>
-                <input type="color" />
-              </Grid2>
-              <Grid2 size={12}>
-                <FormLabel>Background Image</FormLabel>
-                <div>
-                  <input
-                    type="file"
-                    value={""}
-                    onChange={(e) => {
-                      const file = e.target.files?.item(0);
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = (e) => {
-                        const data = e.target?.result;
-                        if (typeof data !== "string") return;
-                        setIndexed((d) => {
-                          d.backgroundImage = data;
-                        });
-                      };
-                      reader.readAsDataURL(file);
-                    }}
-                  />
-                </div>
-              </Grid2>
-              <Grid2 size={12}>
-                <FormLabel>Preset</FormLabel>
-                <RadioGroup
-                  value={preset}
-                  onChange={(e, value) => {
-                    void e;
-                    switch (value) {
-                      case "snow":
-                      case "links":
-                      case "bubbles":
-                        set((d) => {
-                          d.preset = value;
-                        });
-                    }
-                  }}
-                  row
-                >
-                  <FormControlLabel
-                    control={<Radio value="snow" />}
-                    label="Snow"
-                  />
-                  <FormControlLabel
-                    control={<Radio value={"links"} />}
-                    label="Links"
-                  />
-                  <FormControlLabel
-                    control={<Radio value={"bubbles"} />}
-                    label="Bubbles"
-                  />
-                </RadioGroup>
-              </Grid2>
-              <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-                <FormLabel>Alpha</FormLabel>
-                <Slider
-                  value={alphaVal}
-                  onChange={(e, value) => {
-                    if (typeof value !== "number") return e;
-                    set((d) => {
-                      d.alpha = value;
-                    });
-                  }}
-                  max={100}
-                  min={0}
-                  valueLabelDisplay="auto"
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-                <FormLabel>Blur</FormLabel>
-                <Slider
-                  value={blur}
-                  onChange={(e, value) => {
-                    if (typeof value !== "number") return e;
-                    set((d) => {
-                      d.blur = value;
-                    });
-                  }}
-                  max={100}
-                  min={0}
-                  valueLabelDisplay="auto"
-                />
-              </Grid2>
+        <SettingsOutlined color="inherit" />
+      </Fab>
+      <Drawer open={show} onClose={() => setShow(false)} anchor="bottom">
+        <CardHeader
+          title="Settings"
+          action={
+            <>
+              <IconButton
+                onClick={() => {
+                  set((d) => {
+                    d.alpha = SyncStore.alpha;
+                    d.blur = SyncStore.blur;
+                    d.lang = SyncStore.lang;
+                    d.preset = SyncStore.preset;
+                  });
+                  setIndexed((d) => {
+                    d.backgroundImage = "";
+                  });
+                }}
+              >
+                <RestoreOutlined />
+              </IconButton>
+              <IconButton
+                onClick={() => {
+                  setShow(false);
+                }}
+              >
+                <CloseOutlined color="error" />
+              </IconButton>
+            </>
+          }
+        />
+        <CardContent>
+          <Grid2 container spacing={6}>
+            <Grid2 size={12}>
+              <input type="color" />
             </Grid2>
-          </CardContent>
-        </Drawer>
-      </Box>
-      <MemoTopSites />
+            <Grid2 size={12}>
+              <FormLabel>Background Image</FormLabel>
+              <div>
+                <input
+                  type="file"
+                  value={""}
+                  onChange={(e) => {
+                    const file = e.target.files?.item(0);
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                      const data = e.target?.result;
+                      if (typeof data !== "string") return;
+                      setIndexed((d) => {
+                        d.backgroundImage = data;
+                      });
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </div>
+            </Grid2>
+            <Grid2 size={12}>
+              <FormLabel>Preset</FormLabel>
+              <RadioGroup
+                value={preset}
+                onChange={(e, value) => {
+                  void e;
+                  switch (value) {
+                    case "snow":
+                    case "links":
+                    case "bubbles":
+                      set((d) => {
+                        d.preset = value;
+                      });
+                  }
+                }}
+                row
+              >
+                <FormControlLabel
+                  control={<Radio value="snow" />}
+                  label="Snow"
+                />
+                <FormControlLabel
+                  control={<Radio value={"links"} />}
+                  label="Links"
+                />
+                <FormControlLabel
+                  control={<Radio value={"bubbles"} />}
+                  label="Bubbles"
+                />
+              </RadioGroup>
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+              <FormLabel>Alpha</FormLabel>
+              <Slider
+                value={alphaVal}
+                onChange={(e, value) => {
+                  if (typeof value !== "number") return e;
+                  set((d) => {
+                    d.alpha = value;
+                  });
+                }}
+                max={100}
+                min={0}
+                valueLabelDisplay="auto"
+              />
+            </Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+              <FormLabel>Blur</FormLabel>
+              <Slider
+                value={blur}
+                onChange={(e, value) => {
+                  if (typeof value !== "number") return e;
+                  set((d) => {
+                    d.blur = value;
+                  });
+                }}
+                max={100}
+                min={0}
+                valueLabelDisplay="auto"
+              />
+            </Grid2>
+          </Grid2>
+        </CardContent>
+      </Drawer>
     </React.Suspense>
   );
 };
+
+const totalWidth = 1200;
+const span = 8;
+const columns = 12;
+const columnSpacing = 16;
+
+console.log(
+  (totalWidth * span) / columns - (columns - span) * (columnSpacing / columns)
+);
