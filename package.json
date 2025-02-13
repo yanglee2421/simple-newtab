@@ -1,8 +1,8 @@
 {
-  "name": "wxt-react-starter",
-  "description": "This is a simple extension that demonstrates how to use the Web Extension Tools (WXT) library.",
+  "name": "simple-newtab",
+  "description": "A simple new tab page that supports changing the background image and includes some basic effects.",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",
