@@ -9,9 +9,9 @@ import {
   FormLabel,
   Grid2,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
+  // List,
+  // ListItemButton,
+  // ListItemText,
   Radio,
   RadioGroup,
   Slider,
@@ -34,38 +34,38 @@ import {
 import { useIndexedStore } from "@/hooks/useIndexedStore";
 import type { Preset } from "@/hooks/useSyncStore";
 import { base64ToObjectUrl } from "@/lib/utils";
-import { browser } from "wxt/browser";
-import type { TopSites } from "wxt/browser";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+// import { browser } from "wxt/browser";
+// import type { TopSites } from "wxt/browser";
+// import { queryOptions, useQuery } from "@tanstack/react-query";
 
-const fetchTopSites = (options?: TopSites.GetOptionsType) =>
-  queryOptions({
-    queryKey: ["browser.topSites.get", options],
-    queryFn() {
-      if (!options) return browser.topSites.get();
-      return browser.topSites.get(options);
-    },
-  });
+// const fetchTopSites = (options?: TopSites.GetOptionsType) =>
+//   queryOptions({
+//     queryKey: ["browser.topSites.get", options],
+//     queryFn() {
+//       if (!options) return browser.topSites.get();
+//       return browser.topSites.get(options);
+//     },
+//   });
 
-const TopSitesUI = () => {
-  const topSites = useQuery(fetchTopSites());
+// const TopSitesUI = () => {
+//   const topSites = useQuery(fetchTopSites());
 
-  if (topSites.isPending) return null;
+//   if (topSites.isPending) return null;
 
-  if (topSites.isError) return null;
+//   if (topSites.isError) return null;
 
-  return (
-    <List>
-      {topSites.data.map((i) => (
-        <ListItemButton key={i.url} href={i.url}>
-          <ListItemText primary={i.title} />
-        </ListItemButton>
-      ))}
-    </List>
-  );
-};
+//   return (
+//     <List>
+//       {topSites.data.map((i) => (
+//         <ListItemButton key={i.url} href={i.url}>
+//           <ListItemText primary={i.title} />
+//         </ListItemButton>
+//       ))}
+//     </List>
+//   );
+// };
 
-const MemoTopSites = React.memo(TopSitesUI);
+// const MemoTopSites = React.memo(TopSitesUI);
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
@@ -247,7 +247,7 @@ const Content = () => {
         }}
       >
         <MemoClock />
-        <MemoTopSites />
+        {/* <MemoTopSites /> */}
       </Box>
     </Box>
   );
