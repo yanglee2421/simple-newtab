@@ -342,9 +342,6 @@ export const App = () => {
         <CardContent>
           <Grid2 container spacing={6}>
             <Grid2 size={12}>
-              <input type="color" />
-            </Grid2>
-            <Grid2 size={12}>
               <FormLabel>Background Image</FormLabel>
               <div>
                 <input
@@ -367,7 +364,7 @@ export const App = () => {
               </div>
             </Grid2>
             <Grid2 size={12}>
-              <FormLabel>Preset</FormLabel>
+              <FormLabel>Particles Preset</FormLabel>
               <RadioGroup
                 value={preset}
                 onChange={(e, value) => {
