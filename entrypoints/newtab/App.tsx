@@ -140,7 +140,7 @@ const Background = (props: SnowBgProps) => {
     <>
       <MemoBackgroundImage blur={blur} backgroundImage={backgroundImage} />
       <MemoMask alpha={alpha} />
-      <MemoParticle preset={preset} />
+      {preset && <MemoParticle preset={preset} />}
     </>
   );
 };
@@ -376,6 +376,7 @@ export const App = () => {
                     case "snow":
                     case "links":
                     case "bubbles":
+                    case "":
                       set((d) => {
                         d.preset = value;
                       });
@@ -395,6 +396,7 @@ export const App = () => {
                   control={<Radio value={"bubbles"} />}
                   label="Bubbles"
                 />
+                <FormControlLabel control={<Radio value={""} />} label="None" />
               </RadioGroup>
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>

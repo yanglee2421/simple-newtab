@@ -5,7 +5,7 @@ import React from "react";
 import { browser } from "wxt/browser";
 import { WritableDraft } from "immer";
 
-export type Preset = "links" | "snow" | "bubbles";
+export type Preset = "links" | "snow" | "bubbles" | "";
 
 type StoreState = {
   alpha: number;
