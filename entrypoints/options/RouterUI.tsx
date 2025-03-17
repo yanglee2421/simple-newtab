@@ -10,6 +10,7 @@ import {
 import React from "react";
 import { Layout } from "./Layout";
 import { Home } from "./Home";
+import { About } from "./About";
 
 const LANGS = new Set(["en", "zh"]);
 const FALLBACK_LANG = "en";
@@ -74,9 +75,7 @@ const routes: RouteObject[] = [
       {
         id: "about",
         path: "about",
-        Component() {
-          return <div>About</div>;
-        },
+        Component: About,
       },
     ],
   },

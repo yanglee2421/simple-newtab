@@ -51,12 +51,15 @@ const Nav = styled("nav")(({ theme }) => ({
   borderInlineEnd: `1px solid ${theme.palette.divider}`,
 }));
 
-const MainWrapper = styled("div")(({ theme }) => ({
+const Content = styled("div")(({ theme }) => ({
   display: "none",
   flexDirection: "column",
 
-  minBlockSize: "100dvh",
   paddingBlockStart: theme.spacing(14),
+  minBlockSize: "100dvh",
+  "&:has([data-contentfixed=true])": {
+    blockSize: "100dvh",
+  },
 
   [theme.breakpoints.up("sm")]: {
     display: "flex",
@@ -70,10 +73,15 @@ const Main = styled("main")(({ theme }) => ({
 
   padding: theme.spacing(3),
   paddingBlockEnd: theme.spacing(0),
-}));
 
-const Footer = styled("footer")(({ theme }) => ({
-  padding: theme.spacing(3),
+  "&:has([data-contentfixed=true])": {
+    minBlockSize: 0,
+
+    display: "flex",
+    flexDirection: "column",
+
+    paddingBlockEnd: theme.spacing(3),
+  },
 }));
 
 const LinkWrapper = styled("div")(({ theme }) => ({
@@ -187,15 +195,9 @@ export const Layout = (props: Props) => {
           <NavMenu />
         </Nav>
       </Aside>
-      <MainWrapper sx={{ display: showMenuInMobile ? "none" : "flex" }}>
+      <Content sx={{ display: showMenuInMobile ? "none" : "flex" }}>
         <Main>{props.children}</Main>
-        <Footer>
-          &copy;2024 by{" "}
-          <Link href={github_url} target={github_url}>
-            yanglee2421
-          </Link>
-        </Footer>
-      </MainWrapper>
+      </Content>
     </>
   );
 };

@@ -19,7 +19,7 @@ export const Home = () => {
 
   return (
     <Box>
-      <img src={href} alt="" />
+      <img src={href} width={360} alt="" />
     </Box>
   );
 };
