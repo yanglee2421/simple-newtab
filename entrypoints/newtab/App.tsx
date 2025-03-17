@@ -17,7 +17,10 @@ import {
   Slider,
   Typography,
   useTheme,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
+import { FindInPageOutlined } from "@mui/icons-material";
 import React from "react";
 import snowVillage from "./snowVillage.jpg";
 import { loadSlim } from "@tsparticles/slim";
@@ -84,7 +87,7 @@ const Particle = (props: ParticleProps) => (
 
 const MemoParticle = React.memo(Particle);
 
-const bgHref = new URL(snowVillage, import.meta.url).href;
+const snowVillageHref = new URL(snowVillage, import.meta.url).href;
 
 type BackgroundImageProps = { blur: number; backgroundImage: string };
 
@@ -257,28 +260,36 @@ const MemoContent = React.memo(Content);
 
 const useSyncStore = SyncStore.useSyncStore;
 
-export const App = () => {
-  const [show, setShow] = React.useState(false);
-  const [href, setHref] = React.useState("");
+const useCurrentBgHref = () => {
+  const [activedBgHref, setActivedBgHref] = React.useState("");
 
-  const alphaVal = useSyncStore((s) => s.alpha);
-  const blur = useSyncStore((s) => s.blur);
-  const preset = useSyncStore((s) => s.preset);
-  const set = useSyncStore((s) => s.set);
   const backgroundImage = useIndexedStore((s) => s.backgroundImage);
-  const setIndexed = useIndexedStore((s) => s.set);
-  const theme = useTheme();
 
   React.useEffect(() => {
     const val = base64ToObjectUrl(backgroundImage);
-    setHref(val);
+    setActivedBgHref(val);
 
     return () => {
       URL.revokeObjectURL(val);
     };
   }, [backgroundImage]);
 
-  const backgroundImageVal = href || bgHref;
+  const currentBgHref = activedBgHref || snowVillageHref;
+
+  return currentBgHref;
+};
+
+export const App = () => {
+  const [show, setShow] = React.useState(false);
+
+  const alphaVal = useSyncStore((s) => s.alpha);
+  const blur = useSyncStore((s) => s.blur);
+  const preset = useSyncStore((s) => s.preset);
+  const set = useSyncStore((s) => s.set);
+  const setIndexed = useIndexedStore((s) => s.set);
+  const theme = useTheme();
+  const currentBgHref = useCurrentBgHref();
+
   const muiBgColor = theme.palette.background.default;
 
   return (
@@ -286,7 +297,7 @@ export const App = () => {
       <MemoBackground
         alpha={alphaVal}
         blur={blur}
-        backgroundImage={backgroundImageVal}
+        backgroundImage={currentBgHref}
         preset={preset}
       />
       <MemoContent />
@@ -341,27 +352,42 @@ export const App = () => {
         />
         <CardContent>
           <Grid2 container spacing={6}>
-            <Grid2 size={12}>
-              <FormLabel>Background Image</FormLabel>
-              <div>
-                <input
-                  type="file"
-                  value={""}
-                  onChange={(e) => {
-                    const file = e.target.files?.item(0);
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                      const data = e.target?.result;
-                      if (typeof data !== "string") return;
-                      setIndexed((d) => {
-                        d.backgroundImage = data;
-                      });
-                    };
-                    reader.readAsDataURL(file);
-                  }}
-                />
-              </div>
+            <Grid2 size={{ xs: 12, sm: 6, md: 4, xl: 3 }}>
+              <TextField
+                label="Background Image"
+                fullWidth
+                value={currentBgHref}
+                slotProps={{
+                  input: {
+                    readOnly: true,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton component="label">
+                          <FindInPageOutlined />
+                          <input
+                            type="file"
+                            value={""}
+                            onChange={(e) => {
+                              const file = e.target.files?.item(0);
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = (e) => {
+                                const data = e.target?.result;
+                                if (typeof data !== "string") return;
+                                setIndexed((d) => {
+                                  d.backgroundImage = data;
+                                });
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            hidden
+                          />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
             </Grid2>
             <Grid2 size={12}>
               <FormLabel>Particles Preset</FormLabel>
