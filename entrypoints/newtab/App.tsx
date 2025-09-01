@@ -7,7 +7,7 @@ import {
   Fab,
   FormControlLabel,
   FormLabel,
-  Grid2,
+  Grid,
   IconButton,
   // List,
   // ListItemButton,
@@ -351,8 +351,8 @@ export const App = () => {
           }
         />
         <CardContent>
-          <Grid2 container spacing={6}>
-            <Grid2 size={{ xs: 12, sm: 6, md: 4, xl: 3 }}>
+          <Grid container spacing={6}>
+            <Grid size={{ xs: 12, sm: 6, md: 4, xl: 3 }}>
               <TextField
                 label="Background Image"
                 fullWidth
@@ -388,8 +388,8 @@ export const App = () => {
                   },
                 }}
               />
-            </Grid2>
-            <Grid2 size={12}>
+            </Grid>
+            <Grid size={12}>
               <FormLabel>Particles Preset</FormLabel>
               <RadioGroup
                 value={preset}
@@ -421,8 +421,8 @@ export const App = () => {
                 />
                 <FormControlLabel control={<Radio value={""} />} label="None" />
               </RadioGroup>
-            </Grid2>
-            <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <FormLabel>Alpha</FormLabel>
               <Slider
                 value={alphaVal}
@@ -436,8 +436,8 @@ export const App = () => {
                 min={0}
                 valueLabelDisplay="auto"
               />
-            </Grid2>
-            <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <FormLabel>Blur</FormLabel>
               <Slider
                 value={blur}
@@ -451,8 +451,8 @@ export const App = () => {
                 min={0}
                 valueLabelDisplay="auto"
               />
-            </Grid2>
-          </Grid2>
+            </Grid>
+          </Grid>
         </CardContent>
       </Drawer>
     </React.Suspense>
