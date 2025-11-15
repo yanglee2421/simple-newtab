@@ -1,0 +1,4 @@
+onlyBuiltDependencies:
+  - '@tsparticles/engine'
+  - esbuild
+  - spawn-sync
