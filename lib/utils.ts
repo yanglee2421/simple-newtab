@@ -1,4 +1,4 @@
-export function base64ToObjectUrl(base64: string): string {
+export const base64ToObjectUrl = (base64: string): string => {
   if (!base64) return "";
   const binary = atob(base64.split(",")[1]);
   const array = [];
@@ -7,12 +7,16 @@ export function base64ToObjectUrl(base64: string): string {
   }
   const blob = new Blob([new Uint8Array(array)], { type: "image/jpeg" });
   return URL.createObjectURL(blob);
-}
+};
 
 export const calc = (
   totalWidth: number,
   columns: number,
   span: number,
   columnSpacing: number
-) =>
-  (totalWidth * span) / columns - (columns - span) * (columnSpacing / columns);
+) => {
+  const noSpacingWidth = (totalWidth * span) / columns;
+  const spacingWidth = (columns - span) * (columnSpacing / columns);
+
+  return noSpacingWidth - spacingWidth;
+};
