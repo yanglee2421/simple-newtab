@@ -1,6 +1,3 @@
-import { SettingsOutlined } from "@mui/icons-material";
-import wxtLogo from "/wxt.svg";
-import { browser } from "wxt/browser";
 import {
   Button,
   Card,
@@ -10,10 +7,13 @@ import {
   IconButton,
   Typography,
 } from "@mui/material";
+import { browser } from "wxt/browser";
+import { SettingsOutlined } from "@mui/icons-material";
+import wxtLogo from "/wxt.svg";
 
 const wxtLogoHref = new URL(wxtLogo, import.meta.url).href;
 
-export function App() {
+export const App = () => {
   return (
     <Card sx={{ width: 300 }}>
       <CardHeader
@@ -34,4 +34,4 @@ export function App() {
       </CardActions>
     </Card>
   );
-}
+};

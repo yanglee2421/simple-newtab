@@ -9,9 +9,6 @@ import {
   FormLabel,
   Grid,
   IconButton,
-  // List,
-  // ListItemButton,
-  // ListItemText,
   Radio,
   RadioGroup,
   Slider,
@@ -20,6 +17,11 @@ import {
   TextField,
   InputAdornment,
 } from "@mui/material";
+import {
+  CloseOutlined,
+  RestoreOutlined,
+  SettingsOutlined,
+} from "@mui/icons-material";
 import { FindInPageOutlined } from "@mui/icons-material";
 import React from "react";
 import snowVillage from "./snowVillage.jpg";
@@ -28,47 +30,13 @@ import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSnowPreset } from "@tsparticles/preset-snow";
 import { loadLinksPreset } from "@tsparticles/preset-links";
 import { loadBubblesPreset } from "@tsparticles/preset-bubbles";
-import * as SyncStore from "@/hooks/useSyncStore";
 import {
-  CloseOutlined,
-  RestoreOutlined,
-  SettingsOutlined,
-} from "@mui/icons-material";
-import { useIndexedStore } from "@/hooks/useIndexedStore";
+  useSubscribeSyncStoreChange,
+  useSyncStore,
+} from "@/hooks/useSyncStore";
+import { db } from "@/lib/db";
 import type { Preset } from "@/hooks/useSyncStore";
-import { base64ToObjectUrl } from "@/lib/utils";
-// import { browser } from "wxt/browser";
-// import type { TopSites } from "wxt/browser";
-// import { queryOptions, useQuery } from "@tanstack/react-query";
-
-// const fetchTopSites = (options?: TopSites.GetOptionsType) =>
-//   queryOptions({
-//     queryKey: ["browser.topSites.get", options],
-//     queryFn() {
-//       if (!options) return browser.topSites.get();
-//       return browser.topSites.get(options);
-//     },
-//   });
-
-// const TopSitesUI = () => {
-//   const topSites = useQuery(fetchTopSites());
-
-//   if (topSites.isPending) return null;
-
-//   if (topSites.isError) return null;
-
-//   return (
-//     <List>
-//       {topSites.data.map((i) => (
-//         <ListItemButton key={i.url} href={i.url}>
-//           <ListItemText primary={i.title} />
-//         </ListItemButton>
-//       ))}
-//     </List>
-//   );
-// };
-
-// const MemoTopSites = React.memo(TopSitesUI);
+import { useLiveQuery } from "dexie-react-hooks";
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
@@ -85,29 +53,27 @@ const Particle = (props: ParticleProps) => (
   <Particles options={{ preset: props.preset, background: { opacity: 0 } }} />
 );
 
-const MemoParticle = React.memo(Particle);
-
 const snowVillageHref = new URL(snowVillage, import.meta.url).href;
 
 type BackgroundImageProps = { blur: number; backgroundImage: string };
 
-const BackgroundImage = ({ blur, backgroundImage }: BackgroundImageProps) => (
-  <Box sx={{ position: "fixed", inset: 0 }}>
-    <Box
-      sx={{
-        position: "fixed",
-        inset: -2 * blur,
-        zIndex: 0,
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "50%",
-        filter: `blur(${blur}px)`,
-      }}
-    />
-  </Box>
-);
-
-const MemoBackgroundImage = React.memo(BackgroundImage);
+const BackgroundImage = ({ blur, backgroundImage }: BackgroundImageProps) => {
+  return (
+    <Box sx={{ position: "relative", zIndex: 0, isolation: "isolate" }}>
+      <Box
+        sx={{
+          position: "fixed",
+          inset: -2 * blur,
+          zIndex: 1,
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "50%",
+          filter: `blur(${blur}px)`,
+        }}
+      />
+    </Box>
+  );
+};
 
 type MaskProps = { alpha: number };
 
@@ -121,8 +87,6 @@ const Mask = ({ alpha: alphaVal }: MaskProps) => (
     }}
   />
 );
-
-const MemoMask = React.memo(Mask);
 
 type SnowBgProps = {
   alpha: number;
@@ -141,16 +105,14 @@ const Background = (props: SnowBgProps) => {
 
   return (
     <>
-      <MemoBackgroundImage blur={blur} backgroundImage={backgroundImage} />
-      <MemoMask alpha={alpha} />
-      {preset && <MemoParticle preset={preset} />}
+      <BackgroundImage blur={blur} backgroundImage={backgroundImage} />
+      <Mask alpha={alpha} />
+      {preset && <Particle preset={preset} />}
     </>
   );
 };
 
-const MemoBackground = React.memo(Background);
-
-function onAnimationFrame(cb: () => void) {
+const onAnimationFrame = (cb: () => void) => {
   let animate = 0;
 
   const run = () => {
@@ -161,39 +123,39 @@ function onAnimationFrame(cb: () => void) {
   run();
 
   return () => cancelAnimationFrame(animate);
-}
+};
 
-function useLocaleTime(locales?: Intl.LocalesArgument) {
+const useLocaleTime = (locales?: Intl.LocalesArgument) => {
   return React.useSyncExternalStore(
     onAnimationFrame,
     () => getTimeString(locales),
     () => getTimeString(locales)
   );
-}
+};
 
-function getTimeString(locales?: Intl.LocalesArgument) {
+const getTimeString = (locales?: Intl.LocalesArgument) => {
   return new Date().toLocaleTimeString(locales, {
     timeStyle: "short",
     hour12: false,
   });
-}
+};
 
-function useLocaleDate(locales?: Intl.LocalesArgument) {
+const useLocaleDate = (locales?: Intl.LocalesArgument) => {
   return React.useSyncExternalStore(
     onAnimationFrame,
     () => getDateString(locales),
     () => getDateString(locales)
   );
-}
+};
 
-function getDateString(locales?: Intl.LocalesArgument) {
+const getDateString = (locales?: Intl.LocalesArgument) => {
   return new Date().toLocaleDateString(locales, {
     weekday: "short",
     year: "numeric",
     month: "2-digit",
     day: "numeric",
   });
-}
+};
 
 const Clock = () => {
   const time = useLocaleTime();
@@ -228,8 +190,6 @@ const Clock = () => {
   );
 };
 
-const MemoClock = React.memo(Clock);
-
 const Content = () => {
   return (
     <Box
@@ -249,34 +209,26 @@ const Content = () => {
           transform: "translate3d(0,-50%,0)",
         }}
       >
-        <MemoClock />
-        {/* <MemoTopSites /> */}
+        <Clock />
       </Box>
     </Box>
   );
 };
 
-const MemoContent = React.memo(Content);
-
-const useSyncStore = SyncStore.useSyncStore;
-
 const useCurrentBgHref = () => {
-  const [activedBgHref, setActivedBgHref] = React.useState("");
+  const imageId = useSyncStore((s) => s.imageId);
 
-  const backgroundImage = useIndexedStore((s) => s.backgroundImage);
+  console.log(imageId);
 
-  React.useEffect(() => {
-    const val = base64ToObjectUrl(backgroundImage);
-    setActivedBgHref(val);
+  const background = useLiveQuery(() => {
+    return db.backgrounds.get(imageId);
+  }, [imageId]);
 
-    return () => {
-      URL.revokeObjectURL(val);
-    };
-  }, [backgroundImage]);
+  if (!background) {
+    return snowVillageHref;
+  }
 
-  const currentBgHref = activedBgHref || snowVillageHref;
-
-  return currentBgHref;
+  return URL.createObjectURL(background.image);
 };
 
 export const App = () => {
@@ -285,22 +237,22 @@ export const App = () => {
   const alphaVal = useSyncStore((s) => s.alpha);
   const blur = useSyncStore((s) => s.blur);
   const preset = useSyncStore((s) => s.preset);
-  const set = useSyncStore((s) => s.set);
-  const setIndexed = useIndexedStore((s) => s.set);
   const theme = useTheme();
   const currentBgHref = useCurrentBgHref();
+  useSubscribeSyncStoreChange();
 
+  const set = useSyncStore.setState;
   const muiBgColor = theme.palette.background.default;
 
   return (
     <React.Suspense>
-      <MemoBackground
+      <Background
         alpha={alphaVal}
         blur={blur}
         backgroundImage={currentBgHref}
         preset={preset}
       />
-      <MemoContent />
+      <Content />
       <Fab
         onClick={() => setShow(true)}
         color="inherit"
@@ -327,15 +279,7 @@ export const App = () => {
             <>
               <IconButton
                 onClick={() => {
-                  set((d) => {
-                    d.alpha = SyncStore.alpha;
-                    d.blur = SyncStore.blur;
-                    d.lang = SyncStore.lang;
-                    d.preset = SyncStore.preset;
-                  });
-                  setIndexed((d) => {
-                    d.backgroundImage = "";
-                  });
+                  set(useSyncStore.getInitialState());
                 }}
               >
                 <RestoreOutlined />
@@ -370,15 +314,10 @@ export const App = () => {
                             onChange={(e) => {
                               const file = e.target.files?.item(0);
                               if (!file) return;
-                              const reader = new FileReader();
-                              reader.onload = (e) => {
-                                const data = e.target?.result;
-                                if (typeof data !== "string") return;
-                                setIndexed((d) => {
-                                  d.backgroundImage = data;
-                                });
-                              };
-                              reader.readAsDataURL(file);
+
+                              db.backgrounds.add({
+                                image: file,
+                              });
                             }}
                             hidden
                           />

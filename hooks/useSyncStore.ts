@@ -1,29 +1,18 @@
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-import { immer } from "zustand/middleware/immer";
 import React from "react";
+import { create } from "zustand";
 import { browser } from "wxt/browser";
-import { WritableDraft } from "immer";
+import { immer } from "zustand/middleware/immer";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 export type Preset = "links" | "snow" | "bubbles" | "";
 
-type StoreState = {
+type Store = {
   alpha: number;
   blur: number;
   lang: string;
   preset: Preset;
+  imageId: number;
 };
-
-type StoreActions = {
-  set(
-    nextStateOrUpdater:
-      | StoreState
-      | Partial<StoreState>
-      | ((state: WritableDraft<StoreState>) => void)
-  ): void;
-};
-
-type Store = StoreState & StoreActions;
 
 const syncStorage = {
   async getItem(key: string) {
@@ -38,26 +27,22 @@ const syncStorage = {
   },
 };
 
-export const alpha = 15;
-export const blur = 4;
-export const lang = "en";
-export const preset = "snow";
+const makeInitialValues = () => {
+  return {
+    alpha: 15,
+    blur: 4,
+    lang: "en",
+    preset: "snow" as Preset,
+    imageId: 1,
+  };
+};
 
 export const useSyncStore = create<Store>()(
-  persist(
-    immer((set) => ({
-      set,
-      alpha,
-      blur,
-      lang,
-      preset,
-    })),
-    {
-      name: "useSyncStore",
-      storage: createJSONStorage(() => syncStorage),
-      version: 3,
-    }
-  )
+  persist(immer(makeInitialValues), {
+    name: "useSyncStore",
+    storage: createJSONStorage(() => syncStorage),
+    version: 3,
+  })
 );
 
 export const useSyncStoreHasHydrated = () =>
@@ -66,3 +51,17 @@ export const useSyncStoreHasHydrated = () =>
     () => useSyncStore.persist.hasHydrated(),
     () => false
   );
+
+export const useSubscribeSyncStoreChange = () => {
+  React.useEffect(() => {
+    const handleSyncStoreChange = () => {
+      useSyncStore.persist.rehydrate();
+    };
+
+    browser.storage.sync.onChanged.addListener(handleSyncStoreChange);
+
+    return () => {
+      browser.storage.sync.onChanged.removeListener(handleSyncStoreChange);
+    };
+  }, []);
+};

@@ -1,11 +1,10 @@
-import React from "react";
 import { MuiProvider } from "@/components/MuiProvider";
-import { RouterUI } from "./RouterUI";
+import { OptionsRouter } from "./router";
 
 export const App = () => {
   return (
     <MuiProvider>
-      <RouterUI />
+      <OptionsRouter />
     </MuiProvider>
   );
 };
