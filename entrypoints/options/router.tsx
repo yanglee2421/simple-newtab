@@ -13,7 +13,11 @@ import {
   DialogsProvider,
   DashboardLayout,
 } from "@toolpad/core";
-import { ImageOutlined, SettingsOutlined } from "@mui/icons-material";
+import {
+  ImageOutlined,
+  SettingsOutlined,
+  SlideshowOutlined,
+} from "@mui/icons-material";
 import React from "react";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
 import type { Navigation } from "@toolpad/core";
@@ -42,8 +46,13 @@ const langToNavition = (lang: string): Navigation => [
   },
   {
     segment: path(lang),
-    title: "Dashboard",
+    title: "Gallery",
     icon: <ImageOutlined />,
+  },
+  {
+    segment: path(lang, "slides"),
+    title: "Slides",
+    icon: <SlideshowOutlined />,
   },
   {
     segment: path(lang, "settings"),
@@ -128,6 +137,10 @@ const routes: RouteObject[] = [
       {
         index: true,
         lazy: () => import("./home"),
+      },
+      {
+        path: "slides",
+        lazy: () => import("./slides"),
       },
       {
         path: "settings",

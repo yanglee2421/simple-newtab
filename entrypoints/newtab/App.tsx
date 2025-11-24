@@ -24,19 +24,19 @@ import {
 } from "@mui/icons-material";
 import { FindInPageOutlined } from "@mui/icons-material";
 import React from "react";
-import snowVillage from "./snowVillage.jpg";
 import { loadSlim } from "@tsparticles/slim";
-import Particles, { initParticlesEngine } from "@tsparticles/react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { loadSnowPreset } from "@tsparticles/preset-snow";
 import { loadLinksPreset } from "@tsparticles/preset-links";
 import { loadBubblesPreset } from "@tsparticles/preset-bubbles";
+import Particles, { initParticlesEngine } from "@tsparticles/react";
 import {
   useSubscribeSyncStoreChange,
   useSyncStore,
 } from "@/hooks/useSyncStore";
 import { db } from "@/lib/db";
 import type { Preset } from "@/hooks/useSyncStore";
-import { useLiveQuery } from "dexie-react-hooks";
+import snowVillage from "./snowVillage.jpg";
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
