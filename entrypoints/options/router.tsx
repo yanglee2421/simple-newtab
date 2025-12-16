@@ -14,14 +14,15 @@ import {
   DashboardLayout,
 } from "@toolpad/core";
 import {
+  FormatQuoteOutlined,
   ImageOutlined,
   SettingsOutlined,
   SlideshowOutlined,
 } from "@mui/icons-material";
+import { Container, useTheme } from "@mui/material";
 import React from "react";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
 import type { Navigation } from "@toolpad/core";
-import { Container, useTheme } from "@mui/material";
 
 const LANGS = new Set(["en", "zh"]);
 const FALLBACK_LANG = "en";
@@ -48,6 +49,11 @@ const langToNavition = (lang: string): Navigation => [
     segment: path(lang),
     title: "Gallery",
     icon: <ImageOutlined />,
+  },
+  {
+    segment: path(lang, "quotes"),
+    title: "Quotes",
+    icon: <FormatQuoteOutlined />,
   },
   {
     segment: path(lang, "slides"),
@@ -137,6 +143,10 @@ const routes: RouteObject[] = [
       {
         index: true,
         lazy: () => import("./home"),
+      },
+      {
+        path: "quotes",
+        lazy: () => import("./quotes"),
       },
       {
         path: "slides",

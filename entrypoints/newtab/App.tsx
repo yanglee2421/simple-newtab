@@ -129,7 +129,7 @@ const useLocaleTime = (locales?: Intl.LocalesArgument) => {
   return React.useSyncExternalStore(
     onAnimationFrame,
     () => getTimeString(locales),
-    () => getTimeString(locales)
+    () => getTimeString(locales),
   );
 };
 
@@ -144,7 +144,7 @@ const useLocaleDate = (locales?: Intl.LocalesArgument) => {
   return React.useSyncExternalStore(
     onAnimationFrame,
     () => getDateString(locales),
-    () => getDateString(locales)
+    () => getDateString(locales),
   );
 };
 
@@ -191,6 +191,22 @@ const Clock = () => {
 };
 
 const Content = () => {
+  const quote = useLiveQuery(async () => {
+    const count = await db.quotes.count();
+    const index = Math.floor(Math.random() * count);
+    return db.quotes.offset(index).limit(1).first();
+  }, []);
+
+  const renderQuote = () => {
+    if (!quote) {
+      return null;
+    }
+
+    return (
+      <Typography sx={{ textAlign: "center" }}>{quote.content}</Typography>
+    );
+  };
+
   return (
     <Box
       sx={{
@@ -210,6 +226,7 @@ const Content = () => {
         }}
       >
         <Clock />
+        {renderQuote()}
       </Box>
     </Box>
   );
@@ -217,8 +234,6 @@ const Content = () => {
 
 const useCurrentBgHref = () => {
   const imageId = useSyncStore((s) => s.imageId);
-
-  console.log(imageId);
 
   const background = useLiveQuery(() => {
     return db.backgrounds.get(imageId);
@@ -404,5 +419,5 @@ const columns = 12;
 const columnSpacing = 16;
 
 console.log(
-  (totalWidth * span) / columns - (columns - span) * (columnSpacing / columns)
+  (totalWidth * span) / columns - (columns - span) * (columnSpacing / columns),
 );
