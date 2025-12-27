@@ -9,6 +9,7 @@ type Background = {
 type Quote = {
   id: number;
   content: string;
+  anthor: string;
 };
 
 export const db = new Dexie("database") as Dexie & {
@@ -17,8 +18,8 @@ export const db = new Dexie("database") as Dexie & {
 };
 
 // Schema declaration:
-db.version(2).stores({
+db.version(3).stores({
   // primary key "id" automatically generated
   backgrounds: "++id",
-  quotes: "++id, content",
+  quotes: "++id, content, anthor",
 });

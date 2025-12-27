@@ -16,23 +16,24 @@ import {
 import {
   FormatQuoteOutlined,
   ImageOutlined,
+  LightModeOutlined,
   SettingsOutlined,
   SlideshowOutlined,
 } from "@mui/icons-material";
-import { Container, useTheme } from "@mui/material";
+import { Container, IconButton, useTheme } from "@mui/material";
 import React from "react";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
 import type { Navigation } from "@toolpad/core";
 
 const LANGS = new Set(["en", "zh"]);
 const FALLBACK_LANG = "en";
-const getMatchedLang = (path = "", state: string) => {
-  if (LANGS.has(path)) {
-    return path;
+const calculateLanguage = (langInParams = "", langInStore: string) => {
+  if (LANGS.has(langInParams)) {
+    return langInParams;
   }
 
-  if (LANGS.has(state)) {
-    return state;
+  if (LANGS.has(langInStore)) {
+    return langInStore;
   }
 
   return FALLBACK_LANG;
@@ -77,27 +78,37 @@ const BRANDING = {
   title: "Simple NewTab",
 };
 
+const DashboardToolbar = () => {
+  return (
+    <>
+      <IconButton>
+        <LightModeOutlined />
+      </IconButton>
+    </>
+  );
+};
+
 const RootRoute = () => {
   const theme = useTheme();
   const params = useParams();
   const location = useLocation();
   const navigation = useNavigation();
-  const langState = useSyncStore((s) => s.lang);
+  const langInStore = useSyncStore((s) => s.lang);
 
-  const langParams = params.lang;
-  const langMatched = getMatchedLang(langParams, langState);
+  const langInParams = params.lang;
+  const language = calculateLanguage(langInParams, langInStore);
 
   React.useEffect(() => {
     useSyncStore.setState((darft) => {
-      darft.lang = langMatched;
+      darft.lang = language;
     });
-  }, [langMatched]);
+  }, [language]);
 
-  if (langMatched !== langParams) {
+  if (language !== langInParams) {
     return (
       <Navigate
         to={{
-          pathname: `/${langMatched + location.pathname}`,
+          pathname: `/${language + location.pathname}`,
           search: location.search,
           hash: location.hash,
         }}
@@ -122,7 +133,11 @@ const RootRoute = () => {
         }}
       >
         <DialogsProvider>
-          <DashboardLayout>
+          <DashboardLayout
+            slots={{
+              toolbarActions: DashboardToolbar,
+            }}
+          >
             <Container>
               <Outlet />
             </Container>

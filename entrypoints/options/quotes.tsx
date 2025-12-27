@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   Card,
   CardActions,
@@ -9,17 +10,25 @@ import {
   InputAdornment,
   List,
   ListItem,
+  ListItemIcon,
   ListItemText,
   Pagination,
-  Paper,
   Stack,
   TextField,
 } from "@mui/material";
-import { AddOutlined, DeleteOutlined, SaveOutlined } from "@mui/icons-material";
-import { createFormHookContexts, createFormHook } from "@tanstack/react-form";
-import { useLiveQuery } from "dexie-react-hooks";
-import React from "react";
+import {
+  AddOutlined,
+  DeleteOutlined,
+  FormatQuoteOutlined,
+  HistoryEduOutlined,
+  KeyboardReturnOutlined,
+  RestoreOutlined,
+  SaveOutlined,
+} from "@mui/icons-material";
 import { z } from "zod";
+import React from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { createFormHookContexts, createFormHook } from "@tanstack/react-form";
 import { db } from "@/lib/db";
 
 const { formContext, fieldContext } = createFormHookContexts();
@@ -37,6 +46,7 @@ const { useAppForm } = createFormHook({
 
 const schema = z.object({
   content: z.string().min(1),
+  anthor: z.string(),
 });
 
 const calculatePageCount = (count: number, pageSize: number) => {
@@ -59,10 +69,12 @@ export const Component = () => {
   const form = useAppForm({
     defaultValues: {
       content: "",
+      anthor: "",
     },
     onSubmit: async ({ value }) => {
       await db.quotes.add({
         content: value.content,
+        anthor: value.anthor,
       });
     },
     validators: {
@@ -93,13 +105,16 @@ export const Component = () => {
           </IconButton>
         }
       >
-        <ListItemText primary={quote.content} secondary={`#${quote.id}`} />
+        <ListItemIcon>
+          <FormatQuoteOutlined />
+        </ListItemIcon>
+        <ListItemText primary={quote.content} secondary={quote.anthor} />
       </ListItem>
     ));
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ paddingBlock: 3 }}>
       <Card>
         <CardHeader title="Quotes" action={<AddOutlined />} />
         <CardContent>
@@ -126,21 +141,70 @@ export const Component = () => {
                       error={contentField.state.meta.errors.length > 0}
                       helperText={contentField.state.meta.errors.at(0)?.message}
                       fullWidth
-                      variant="standard"
                       slotProps={{
                         input: {
                           endAdornment: (
                             <InputAdornment position="end">
-                              <IconButton type="submit" form={formId}>
-                                <SaveOutlined />
+                              <IconButton
+                                type="submit"
+                                form={formId}
+                                tabIndex={5}
+                              >
+                                <KeyboardReturnOutlined />
                               </IconButton>
                             </InputAdornment>
                           ),
                           startAdornment: (
                             <InputAdornment position="start">
-                              <AddOutlined />
+                              <FormatQuoteOutlined />
                             </InputAdornment>
                           ),
+                          slotProps: {
+                            input: {
+                              tabIndex: 1,
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  )}
+                </form.AppField>
+              </Grid>
+              <Grid size={12}>
+                <form.AppField name="anthor">
+                  {(anthorField) => (
+                    <anthorField.TextField
+                      value={anthorField.state.value}
+                      onChange={(e) => {
+                        anthorField.handleChange(e.target.value);
+                      }}
+                      onBlur={anthorField.handleBlur}
+                      error={anthorField.state.meta.errors.length > 0}
+                      helperText={anthorField.state.meta.errors.at(0)?.message}
+                      fullWidth
+                      slotProps={{
+                        input: {
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                type="submit"
+                                form={formId}
+                                tabIndex={6}
+                              >
+                                <KeyboardReturnOutlined />
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <HistoryEduOutlined />
+                            </InputAdornment>
+                          ),
+                          slotProps: {
+                            input: {
+                              tabIndex: 2,
+                            },
+                          },
                         },
                       }}
                     />
@@ -150,20 +214,39 @@ export const Component = () => {
             </Grid>
           </form>
         </CardContent>
-        <CardActions></CardActions>
+        <CardActions>
+          <Button
+            type="submit"
+            form={formId}
+            tabIndex={3}
+            startIcon={<SaveOutlined />}
+          >
+            Submit
+          </Button>
+          <Button
+            type="reset"
+            form={formId}
+            tabIndex={4}
+            startIcon={<RestoreOutlined />}
+          >
+            Reset
+          </Button>
+        </CardActions>
       </Card>
-      <Pagination
-        page={pageIndex + 1}
-        count={calculatePageCount(count || 0, pageSize)}
-        onChange={(_, page) => {
-          setPageIndex(page - 1);
-        }}
-      />
-      <Paper>
-        <List subheader={"Quote"} disablePadding>
-          {renderListRows()}
-        </List>
-      </Paper>
+      <Card>
+        <CardContent>
+          <Box>
+            <Pagination
+              page={pageIndex + 1}
+              count={calculatePageCount(count || 0, pageSize)}
+              onChange={(_, page) => {
+                setPageIndex(page - 1);
+              }}
+            />
+          </Box>
+        </CardContent>
+        <List disablePadding>{renderListRows()}</List>
+      </Card>
     </Stack>
   );
 };

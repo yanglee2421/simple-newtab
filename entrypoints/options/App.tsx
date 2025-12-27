@@ -1,8 +1,7 @@
+import { z } from "zod";
+import { browser } from "wxt/browser";
 import { MuiProvider } from "@/components/MuiProvider";
 import { OptionsRouter } from "./router";
-import { browser } from "wxt/browser";
-import { z } from "zod";
-import React from "react";
 
 const calculateLocale = (language: string) => {
   const stringArray = language.split("-");

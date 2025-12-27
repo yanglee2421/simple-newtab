@@ -16,6 +16,7 @@ import {
   useTheme,
   TextField,
   InputAdornment,
+  CircularProgress,
 } from "@mui/material";
 import {
   CloseOutlined,
@@ -157,10 +158,30 @@ const getDateString = (locales?: Intl.LocalesArgument) => {
   });
 };
 
+const isChineseLocale = () => {
+  return /^zh\b/i.test(navigator.language);
+};
+
+const calculateChineseLunar = (date: Date) => {
+  if (!isChineseLocale()) {
+    return "";
+  }
+
+  const dateFormater = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  return dateFormater.format(date);
+};
+
 const Clock = () => {
   const time = useLocaleTime();
   const date = useLocaleDate();
   const theme = useTheme();
+
+  const lunar = calculateChineseLunar(new Date());
 
   return (
     <Box>
@@ -179,34 +200,84 @@ const Clock = () => {
         component={"time"}
         variant="subtitle1"
         sx={{
-          color: theme.palette.common.white,
+          color: alpha(
+            theme.palette.common.white,
+            1 - theme.palette.action.activatedOpacity,
+          ),
           textAlign: "center",
           display: "block",
         }}
       >
         {date}
       </Typography>
+      <React.Activity mode={lunar ? "visible" : "hidden"}>
+        <Typography
+          component={"time"}
+          variant="subtitle2"
+          sx={{
+            color: alpha(
+              theme.palette.common.white,
+              1 - theme.palette.action.activatedOpacity,
+            ),
+            textAlign: "center",
+            display: "block",
+          }}
+        >
+          {lunar}
+        </Typography>
+      </React.Activity>
     </Box>
   );
 };
 
-const Content = () => {
+const Quotes = () => {
   const quote = useLiveQuery(async () => {
     const count = await db.quotes.count();
     const index = Math.floor(Math.random() * count);
     return db.quotes.offset(index).limit(1).first();
   }, []);
 
-  const renderQuote = () => {
-    if (!quote) {
-      return null;
-    }
+  if (!quote) {
+    return null;
+  }
 
-    return (
-      <Typography sx={{ textAlign: "center" }}>{quote.content}</Typography>
-    );
-  };
+  return (
+    <>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
 
+          marginTop: "auto",
+        }}
+      >
+        <Typography
+          sx={{
+            color: (theme) => theme.palette.primary.contrastText,
+            lineHeight: "20px",
+          }}
+          variant="overline"
+        >
+          「&nbsp;{quote.content}&nbsp;」
+        </Typography>
+        <Typography
+          sx={{
+            lineHeight: "20px",
+            color: (theme) => theme.palette.primary.contrastText,
+            opacity: quote.anthor ? 1 : 0,
+          }}
+          variant="overline"
+        >
+          -{quote.anthor}-
+        </Typography>
+      </Box>
+    </>
+  );
+};
+
+const Content = () => {
   return (
     <Box
       sx={{
@@ -226,8 +297,8 @@ const Content = () => {
         }}
       >
         <Clock />
-        {renderQuote()}
       </Box>
+      <Quotes />
     </Box>
   );
 };
@@ -260,7 +331,25 @@ export const App = () => {
   const muiBgColor = theme.palette.background.default;
 
   return (
-    <React.Suspense>
+    <React.Suspense
+      fallback={
+        <Box
+          sx={{
+            position: "fixed",
+            insetInlineStart: 0,
+            insetBlockStart: 0,
+            inlineSize: "100dvw",
+            blockSize: "100dvh",
+
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      }
+    >
       <Background
         alpha={alphaVal}
         blur={blur}
