@@ -48,7 +48,7 @@ const langToNavition = (lang: string): Navigation => [
   },
   {
     segment: path(lang),
-    title: "Gallery",
+    title: "Background",
     icon: <ImageOutlined />,
   },
   {
