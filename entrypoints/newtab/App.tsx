@@ -255,7 +255,7 @@ const Quotes = () => {
       >
         <Typography
           sx={{
-            color: (theme) => theme.palette.primary.contrastText,
+            color: (theme) => alpha(theme.palette.common.white, 1),
             lineHeight: "20px",
           }}
           variant="overline"
@@ -265,7 +265,7 @@ const Quotes = () => {
         <Typography
           sx={{
             lineHeight: "20px",
-            color: (theme) => theme.palette.primary.contrastText,
+            color: (theme) => alpha(theme.palette.common.white, 1),
             opacity: quote.anthor ? 1 : 0,
           }}
           variant="overline"

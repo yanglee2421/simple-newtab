@@ -8,11 +8,16 @@ import {
   ImageList,
   ImageListItem,
   InputAdornment,
+  List,
+  ListItem,
+  ListItemText,
+  MenuItem,
   Pagination,
   Stack,
   TextField,
 } from "@mui/material";
 import {
+  AddOutlined,
   ContentPasteGoOutlined,
   DeleteOutlined,
   FindInPageOutlined,
@@ -22,7 +27,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { ScrollToTopButton } from "@/components/scroll";
 
-const makePageCount = (count: number, pageSize: number) => {
+const calculatePageCount = (count: number, pageSize: number) => {
   return Math.ceil(count / pageSize);
 };
 
@@ -30,6 +35,9 @@ export const Component = () => {
   const [pageIndex, setPageIndex] = React.useState(0);
   const [pageSize] = React.useState(24);
 
+  const fileInputId = React.useId();
+
+  const backgroundType = useSyncStore((store) => store.backgroundType);
   const imageId = useSyncStore((s) => s.imageId);
 
   const itemData = useLiveQuery(() => {
@@ -51,6 +59,47 @@ export const Component = () => {
     <>
       <ScrollToTopButton />
       <Stack spacing={3} sx={{ paddingBlock: 3 }}>
+        <Card>
+          <CardHeader title="背景设置" />
+          <CardContent>
+            <Grid container spacing={3}>
+              <Grid size={12}></Grid>
+            </Grid>
+            <List disablePadding>
+              <ListItem
+                secondaryAction={
+                  <TextField
+                    value={backgroundType}
+                    onChange={(e) => {
+                      setSync((draft) => {
+                        const value = e.target.value;
+
+                        switch (value) {
+                          case "gallery":
+                          case "color":
+                          case "image":
+                            draft.backgroundType = value;
+                        }
+                      });
+                    }}
+                    select
+                    size="small"
+                    sx={{ minInlineSize: 160 }}
+                  >
+                    <MenuItem value="image">图片</MenuItem>
+                    <MenuItem value="color">纯色</MenuItem>
+                    <MenuItem value="gallery">幻灯片</MenuItem>
+                  </TextField>
+                }
+              >
+                <ListItemText
+                  primary="个性化设置背景"
+                  secondary="图片背景适用于当前桌面。纯色或幻灯片背景则适用于所有桌面。"
+                />
+              </ListItem>
+            </List>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader title="Import Images" />
           <CardContent>
@@ -119,11 +168,35 @@ export const Component = () => {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader title="Background List" />
+          <CardHeader
+            title="Background List"
+            action={
+              <IconButton component="label" htmlFor={fileInputId}>
+                <AddOutlined />
+                <input
+                  type="file"
+                  name=""
+                  id={fileInputId}
+                  hidden
+                  value={""}
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (!files) return;
+
+                    for (const file of files) {
+                      db.backgrounds.add({ image: file });
+                    }
+                  }}
+                  accept="image/*"
+                  multiple
+                />
+              </IconButton>
+            }
+          />
           <CardContent>
             <Pagination
               page={pageIndex + 1}
-              count={makePageCount(count || 0, pageSize)}
+              count={calculatePageCount(count || 0, pageSize)}
               onChange={(_, page) => {
                 setPageIndex(page - 1);
               }}

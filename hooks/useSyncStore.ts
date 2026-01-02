@@ -5,6 +5,7 @@ import { immer } from "zustand/middleware/immer";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 export type Preset = "links" | "snow" | "bubbles" | "";
+export type BackgroundType = "image" | "color" | "gallery";
 
 type Store = {
   alpha: number;
@@ -12,6 +13,7 @@ type Store = {
   lang: string;
   preset: Preset;
   imageId: number;
+  backgroundType: BackgroundType;
 };
 
 const syncStorage = {
@@ -27,13 +29,14 @@ const syncStorage = {
   },
 };
 
-const makeInitialValues = () => {
+const makeInitialValues = (): Store => {
   return {
     alpha: 15,
     blur: 4,
     lang: "en",
     preset: "snow" as Preset,
     imageId: 1,
+    backgroundType: "image",
   };
 };
 
@@ -42,15 +45,16 @@ export const useSyncStore = create<Store>()(
     name: "useSyncStore",
     storage: createJSONStorage(() => syncStorage),
     version: 3,
-  })
+  }),
 );
 
-export const useSyncStoreHasHydrated = () =>
-  React.useSyncExternalStore(
+export const useSyncStoreHasHydrated = () => {
+  return React.useSyncExternalStore(
     (onStateChange) => useSyncStore.persist.onFinishHydration(onStateChange),
     () => useSyncStore.persist.hasHydrated(),
-    () => false
+    () => false,
   );
+};
 
 export const useSubscribeSyncStoreChange = () => {
   React.useEffect(() => {
