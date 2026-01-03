@@ -29,19 +29,6 @@ const calculatePageCount = (count: number, pageSize: number) => {
   return Math.ceil(count / pageSize);
 };
 
-const renderBackgroundTypePanel = (backgroundType: string) => {
-  switch (backgroundType) {
-    case "image":
-      return <ImagePanel />;
-    case "color":
-      return null;
-    case "gallery":
-      return null;
-    default:
-      return null;
-  }
-};
-
 const calculateImageWidth = (
   inlineSize: number,
   naturalWidth: number,
@@ -106,10 +93,9 @@ const ImageCell = (props: ImageCellProps) => {
 
   React.useEffect(() => {
     const el = boxRef.current;
+    devLog(false, el);
 
     if (!el) return;
-
-    devLog(false, el);
 
     const observer = new ResizeObserver(
       ([
@@ -281,6 +267,43 @@ const ImagePanel = () => {
       </CardActions>
     </Card>
   );
+};
+
+const ColorPanel = () => {
+  return (
+    <Card>
+      <CardHeader title="纯色" />
+      <CardContent></CardContent>
+      <CardActions>
+        <Pagination />
+      </CardActions>
+    </Card>
+  );
+};
+
+const GalleryPanel = () => {
+  return (
+    <Card>
+      <CardHeader title="幻灯片放映" />
+      <CardContent></CardContent>
+      <CardActions>
+        <Pagination />
+      </CardActions>
+    </Card>
+  );
+};
+
+const renderBackgroundTypePanel = (backgroundType: string) => {
+  switch (backgroundType) {
+    case "image":
+      return <ImagePanel />;
+    case "color":
+      return <ColorPanel />;
+    case "gallery":
+      return <GalleryPanel />;
+    default:
+      return null;
+  }
 };
 
 export const Component = () => {
