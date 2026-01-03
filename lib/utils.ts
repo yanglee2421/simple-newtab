@@ -20,3 +20,18 @@ export const calc = (
 
   return noSpacingWidth - spacingWidth;
 };
+
+export const devLog = (
+  enable: boolean,
+  ...args: Parameters<typeof console.log>
+) => {
+  if (import.meta.env.PROD) {
+    return;
+  }
+
+  if (!enable) {
+    return;
+  }
+
+  console.log(...args);
+};
