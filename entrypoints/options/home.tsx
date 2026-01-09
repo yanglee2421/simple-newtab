@@ -18,7 +18,7 @@ import {
   styled,
   TextField,
 } from "@mui/material";
-import { DeleteOutlined, FindInPageOutlined } from "@mui/icons-material";
+import { Add, Delete, FindInPageOutlined } from "@mui/icons-material";
 import React from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -26,6 +26,7 @@ import {
   DndContext,
   KeyboardSensor,
   PointerSensor,
+  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
@@ -36,6 +37,7 @@ import {
   SortableContext,
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
+  arrayMove,
 } from "@dnd-kit/sortable";
 import { db } from "@/lib/db";
 import { ScrollToTopButton } from "@/components/scroll";
@@ -69,45 +71,32 @@ const calculateImageHeight = (
   return blockSize;
 };
 
-const StyleImg = styled("img")({
+const StyledImg = styled("img")({
   objectFit: "cover",
   objectPosition: "center",
 
   position: "absolute",
   insetInlineStart: "50%",
   insetBlockStart: "50%",
-  translate: "-50% -50%",
+  zIndex: 0,
+
+  translate: "-50% -50% -10px",
 });
 
-type ImageCellProps = {
-  image: File;
-  selected: boolean;
-  id: number;
-  clickable?: boolean;
-};
+const SquareBox = styled("div")({
+  aspectRatio: "1/1",
+});
 
-const ImageCell = (props: ImageCellProps) => {
+const FullBox = styled("div")({
+  inlineSize: "100%",
+  blockSize: "100%",
+});
+
+const useResizeObserver = () => {
   const [inlineSize, setInlineSize] = React.useState(0);
   const [blockSize, setBlockSize] = React.useState(0);
-  const [naturalWidth, setNaturalWidth] = React.useState(0);
-  const [naturalHeight, setNaturalHeight] = React.useState(0);
-  const [openMenu, setOpenMenu] = React.useState(false);
-  const [mouseX, setMouseX] = React.useState(0);
-  const [mouseY, setMouseY] = React.useState(0);
 
   const boxRef = React.useRef<HTMLDivElement>(null);
-
-  const imageWidth = calculateImageWidth(
-    inlineSize,
-    naturalWidth,
-    naturalHeight,
-  );
-  const imageHeight = calculateImageHeight(
-    blockSize,
-    naturalWidth,
-    naturalHeight,
-  );
-
   React.useEffect(() => {
     const el = boxRef.current;
     devLog(false, el);
@@ -132,39 +121,135 @@ const ImageCell = (props: ImageCellProps) => {
     };
   }, []);
 
+  return { inlineSize, blockSize, boxRef };
+};
+
+type SelectableProps = React.PropsWithChildren & {
+  selected: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+};
+
+const Selectable = (props: SelectableProps) => {
+  if (props.disabled) {
+    return <FullBox>{props.children}</FullBox>;
+  }
+
   return (
-    <>
-      <ButtonBase
-        ref={boxRef}
-        component="div"
-        onClick={() => {
-          if (!props.clickable) return;
-          useSyncStore.setState((draft) => {
-            draft.imageId = props.id;
-          });
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          setOpenMenu((prev) => !prev);
-          setMouseX(e.clientX);
-          setMouseY(e.clientY);
-        }}
-        sx={{
-          aspectRatio: "1/1",
-          overflow: "hidden",
-          borderRadius: 1,
+    <ButtonBase
+      sx={{
+        inlineSize: "100%",
+        blockSize: "100%",
 
-          position: "relative",
+        position: "relative",
+      }}
+      onClick={props.onClick}
+    >
+      {props.children}
+      {props.selected && (
+        <Box
+          sx={{
+            borderColor: (theme) => theme.palette.primary.main,
+            borderStyle: "solid",
+            borderWidth: 4,
 
-          borderColor: (theme) => theme.palette.primary.main,
-          borderStyle: "solid",
-          borderWidth: props.selected ? 4 : 0,
-          cursor: props.clickable ? "context-menu" : "default",
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+          }}
+        ></Box>
+      )}
+    </ButtonBase>
+  );
+};
+
+type DeleteableProps = React.PropsWithChildren & {
+  onDelete: () => void;
+};
+
+const Deleteable = (props: DeleteableProps) => {
+  const [openMenu, setOpenMenu] = React.useState(false);
+  const [mouseX, setMouseX] = React.useState(0);
+  const [mouseY, setMouseY] = React.useState(0);
+
+  const handleMenuClose = () => {
+    setOpenMenu(false);
+  };
+
+  return (
+    <FullBox
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setOpenMenu((prev) => !prev);
+        setMouseX(e.clientX);
+        setMouseY(e.clientY);
+      }}
+    >
+      {props.children}
+      <Menu
+        anchorReference="anchorPosition"
+        anchorPosition={{
+          top: mouseY,
+          left: mouseX,
         }}
-        disableRipple={!props.clickable}
+        open={openMenu}
+        onClose={handleMenuClose}
       >
-        <StyleImg
-          src={URL.createObjectURL(props.image)}
+        <MenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMenuClose();
+            props.onDelete();
+          }}
+        >
+          <ListItemIcon>
+            <Delete fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
+    </FullBox>
+  );
+};
+
+type ImageCellProps = {
+  id: number;
+};
+
+const ImageCell = (props: ImageCellProps) => {
+  const [naturalWidth, setNaturalWidth] = React.useState(0);
+  const [naturalHeight, setNaturalHeight] = React.useState(0);
+
+  const { boxRef, inlineSize, blockSize } = useResizeObserver();
+  const background = useLiveQuery(() => {
+    return db.backgrounds.get(props.id);
+  }, [props.id]);
+
+  const imageWidth = calculateImageWidth(
+    inlineSize,
+    naturalWidth,
+    naturalHeight,
+  );
+  const imageHeight = calculateImageHeight(
+    blockSize,
+    naturalWidth,
+    naturalHeight,
+  );
+
+  return (
+    <FullBox
+      ref={boxRef}
+      sx={{
+        position: "relative",
+
+        overflow: "hidden",
+
+        borderRadius: 1,
+      }}
+    >
+      {background && (
+        <StyledImg
+          src={URL.createObjectURL(background.image)}
           alt=""
           width={imageWidth || void 0}
           height={imageHeight || void 0}
@@ -177,31 +262,8 @@ const ImageCell = (props: ImageCellProps) => {
             setNaturalHeight(naturalHeight);
           }}
         />
-        <Menu
-          anchorReference="anchorPosition"
-          anchorPosition={{
-            top: mouseY,
-            left: mouseX,
-          }}
-          open={openMenu}
-          onClose={() => {
-            setOpenMenu(false);
-          }}
-        >
-          <MenuItem
-            onClick={() => {
-              setOpenMenu(false);
-              db.backgrounds.delete(props.id);
-            }}
-          >
-            <ListItemIcon>
-              <DeleteOutlined fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Delete</ListItemText>
-          </MenuItem>
-        </Menu>
-      </ButtonBase>
-    </>
+      )}
+    </FullBox>
   );
 };
 
@@ -265,12 +327,24 @@ const ImagePanel = () => {
           }}
         >
           {backgroundImages?.map((backgroundImage) => (
-            <ImageCell
-              key={backgroundImage.id}
-              id={backgroundImage.id}
-              image={backgroundImage.image}
-              selected={Object.is(imageId, backgroundImage.id)}
-            />
+            <SquareBox key={backgroundImage.id}>
+              <Deleteable
+                onDelete={() => {
+                  db.backgrounds.delete(backgroundImage.id);
+                }}
+              >
+                <Selectable
+                  selected={Object.is(imageId, backgroundImage.id)}
+                  onClick={() => {
+                    useSyncStore.setState((draft) => {
+                      draft.imageId = backgroundImage.id;
+                    });
+                  }}
+                >
+                  <ImageCell id={backgroundImage.id} />
+                </Selectable>
+              </Deleteable>
+            </SquareBox>
           ))}
         </Box>
       </CardContent>
@@ -304,62 +378,7 @@ const ColorPanel = () => {
             },
             gap: 0.5,
           }}
-        >
-          <ButtonBase
-            sx={{
-              backgroundColor: (theme) => theme.palette.primary.main,
-
-              aspectRatio: "1/1",
-              overflow: "hidden",
-              borderRadius: 1,
-            }}
-          ></ButtonBase>
-          <ButtonBase
-            sx={{
-              backgroundColor: (theme) => theme.palette.secondary.main,
-
-              aspectRatio: "1/1",
-              overflow: "hidden",
-              borderRadius: 1,
-            }}
-          ></ButtonBase>
-          <ButtonBase
-            sx={{
-              backgroundColor: (theme) => theme.palette.success.main,
-
-              aspectRatio: "1/1",
-              overflow: "hidden",
-              borderRadius: 1,
-            }}
-          ></ButtonBase>
-          <ButtonBase
-            sx={{
-              backgroundColor: (theme) => theme.palette.warning.main,
-
-              aspectRatio: "1/1",
-              overflow: "hidden",
-              borderRadius: 1,
-            }}
-          ></ButtonBase>
-          <ButtonBase
-            sx={{
-              backgroundColor: (theme) => theme.palette.error.main,
-
-              aspectRatio: "1/1",
-              overflow: "hidden",
-              borderRadius: 1,
-            }}
-          ></ButtonBase>
-          <ButtonBase
-            sx={{
-              backgroundColor: (theme) => theme.palette.info.main,
-
-              aspectRatio: "1/1",
-              overflow: "hidden",
-              borderRadius: 1,
-            }}
-          ></ButtonBase>
-        </Box>
+        ></Box>
       </CardContent>
       <CardActions>
         <Pagination />
@@ -368,89 +387,70 @@ const ColorPanel = () => {
   );
 };
 
-const calculateIsHTMLElement = (el: unknown): el is HTMLElement => {
-  return el instanceof HTMLElement;
-};
+// const calculateIsHTMLElement = (el: unknown): el is HTMLElement => {
+//   return el instanceof HTMLElement;
+// };
 
-type SortableImageCellProps = {
+type DraggableProps = React.PropsWithChildren & {
   id: number;
 };
 
-const SortableImageCell = (props: SortableImageCellProps) => {
-  const [inlineSize, setInlineSize] = React.useState(0);
-  const [blockSize, setBlockSize] = React.useState(0);
-  const [naturalWidth, setNaturalWidth] = React.useState(0);
-  const [naturalHeight, setNaturalHeight] = React.useState(0);
+const Draggable = (props: DraggableProps) => {
+  const draggable = useDraggable({
+    id: props.id,
+  });
 
-  const boxRef = React.useRef<HTMLElement>(null);
+  return (
+    <FullBox
+      ref={(el) => {
+        draggable.setNodeRef(el);
 
+        return () => {
+          draggable.setNodeRef(null);
+        };
+      }}
+      sx={{
+        position: "relative",
+        zIndex: 1000,
+      }}
+      style={{
+        transform: CSS.Transform.toString({
+          scaleX: 1,
+          scaleY: 1,
+          x: draggable.transform?.x || 0,
+          y: draggable.transform?.y || 0,
+        }),
+      }}
+      {...draggable.attributes}
+      {...draggable.listeners}
+    >
+      {props.children}
+    </FullBox>
+  );
+};
+
+type SortableProps = React.PropsWithChildren & {
+  id: number;
+};
+
+const Sortable = (props: SortableProps) => {
   const sortable = useSortable({
     id: props.id,
   });
 
-  const backgroundImage = useLiveQuery(() => {
-    return db.backgrounds.get(props.id);
-  });
-
-  React.useEffect(() => {
-    const el = boxRef.current;
-    devLog(false, el);
-
-    if (!el) return;
-
-    const observer = new ResizeObserver(
-      ([
-        {
-          contentBoxSize: [{ inlineSize, blockSize }],
-        },
-      ]) => {
-        setInlineSize(inlineSize);
-        setBlockSize(blockSize);
-      },
-    );
-    observer.observe(el);
-
-    return () => {
-      observer.unobserve(el);
-      observer.disconnect();
-    };
-  }, []);
-
-  const imageWidth = calculateImageWidth(
-    inlineSize,
-    naturalWidth,
-    naturalHeight,
-  );
-  const imageHeight = calculateImageHeight(
-    blockSize,
-    naturalWidth,
-    naturalHeight,
-  );
-
-  devLog(true, sortable.transform, sortable.transition);
-
   return (
-    <Box
+    <Grid
+      size={{ xs: 6, sm: 4, md: 3, lg: 2, xl: 1 }}
+      sx={{
+        zIndex: sortable.isDragging ? (theme) => theme.zIndex.tooltip : "auto",
+      }}
       ref={(el) => {
-        const isHTMLEl = calculateIsHTMLElement(el);
-        if (!isHTMLEl) return;
-
         sortable.setNodeRef(el);
-        boxRef.current = el;
 
         return () => {
           sortable.setNodeRef(null);
-          boxRef.current = null;
         };
       }}
-      sx={{
-        aspectRatio: "1/1",
-        overflow: "hidden",
-        borderRadius: 1,
-
-        position: "relative",
-      }}
-      component={"div"}
       style={{
         transform: CSS.Transform.toString(sortable.transform),
         transition: sortable.transition,
@@ -458,23 +458,8 @@ const SortableImageCell = (props: SortableImageCellProps) => {
       {...sortable.attributes}
       {...sortable.listeners}
     >
-      <StyleImg
-        src={backgroundImage ? URL.createObjectURL(backgroundImage.image) : ""}
-        alt=""
-        width={imageWidth || void 0}
-        height={imageHeight || void 0}
-        draggable={false}
-        onLoad={(e) => {
-          const { naturalWidth, naturalHeight } = e.currentTarget;
-
-          devLog(false, naturalWidth, naturalHeight);
-          setNaturalWidth(naturalWidth);
-          setNaturalHeight(naturalHeight);
-
-          URL.revokeObjectURL(e.currentTarget.src);
-        }}
-      />
-    </Box>
+      {props.children}
+    </Grid>
   );
 };
 
@@ -484,31 +469,19 @@ const DroppableImageGrid = (props: React.PropsWithChildren) => {
   });
 
   return (
-    <Box
+    <Grid
       ref={(el) => {
-        const isHTMLEl = calculateIsHTMLElement(el);
-        if (!isHTMLEl) return;
-
         droppable.setNodeRef(el);
 
         return () => {
           droppable.setNodeRef(null);
         };
       }}
-      sx={{
-        display: "grid",
-        gridTemplateColumns: {
-          xs: "repeat(2,minmax(0,1fr))",
-          sm: "repeat(3,minmax(0,1fr))",
-          md: "repeat(4,minmax(0,1fr))",
-          lg: "repeat(6,minmax(0,1fr))",
-          xl: "repeat(8,minmax(0,1fr))",
-        },
-        gap: 0.5,
-      }}
+      container
+      spacing={2}
     >
       {props.children}
-    </Box>
+    </Grid>
   );
 };
 
@@ -520,33 +493,21 @@ const DroppableGalleryGrid = (props: React.PropsWithChildren) => {
   const gallery = useSyncStore((store) => store.gallery);
 
   return (
-    <Box
+    <Grid
       ref={(el) => {
-        const isHTMLEl = calculateIsHTMLElement(el);
-        if (!isHTMLEl) return;
-
         droppable.setNodeRef(el);
 
         return () => {
           droppable.setNodeRef(null);
         };
       }}
-      sx={{
-        display: "grid",
-        gridTemplateColumns: {
-          xs: "repeat(2,minmax(0,1fr))",
-          sm: "repeat(3,minmax(0,1fr))",
-          md: "repeat(4,minmax(0,1fr))",
-          lg: "repeat(6,minmax(0,1fr))",
-          xl: "repeat(8,minmax(0,1fr))",
-        },
-        gap: 0.5,
-      }}
+      container
+      spacing={1}
     >
       <SortableContext items={gallery} strategy={horizontalListSortingStrategy}>
         {props.children}
       </SortableContext>
-    </Box>
+    </Grid>
   );
 };
 
@@ -575,7 +536,7 @@ const GalleryPanel = () => {
   );
 
   const gallery = useSyncStore((store) => store.gallery);
-  devLog(false, gallery);
+  devLog(true, gallery);
 
   return (
     <Card>
@@ -583,7 +544,7 @@ const GalleryPanel = () => {
         title="幻灯片放映"
         action={
           <IconButton component="label" htmlFor={fileInputId}>
-            <FindInPageOutlined />
+            <Add />
             <input
               type="file"
               id={fileInputId}
@@ -606,23 +567,47 @@ const GalleryPanel = () => {
       <CardContent>
         <DndContext
           onDragEnd={(e) => {
-            devLog(false, e);
+            devLog(true, e);
+
+            useSyncStore.setState((draft) => {
+              if (!e.over) return;
+              draft.gallery = arrayMove(
+                Array.from(new Set([...draft.gallery, e.active.id as number])),
+                draft.gallery.indexOf(e.active.id as number),
+                draft.gallery.indexOf(e.over.id as number),
+              );
+            });
           }}
           sensors={sensors}
           collisionDetection={closestCenter}
         >
           <DroppableGalleryGrid>
             {gallery?.map((id) => (
-              <SortableImageCell key={id} id={id} />
+              <Sortable key={id} id={id}>
+                <SquareBox>
+                  <ImageCell id={id} />
+                </SquareBox>
+              </Sortable>
             ))}
           </DroppableGalleryGrid>
           <DroppableImageGrid>
-            {backgroundImages?.map((backgroundImage) => (
-              <SortableImageCell
-                key={backgroundImage.id}
-                id={backgroundImage.id}
-              />
-            ))}
+            {backgroundImages
+              ?.filter((backgroundImage) => {
+                return !gallery.includes(backgroundImage.id);
+              })
+              .map((backgroundImage) => (
+                <SquareBox key={backgroundImage.id}>
+                  <Deleteable
+                    onDelete={() => {
+                      db.backgrounds.delete(backgroundImage.id);
+                    }}
+                  >
+                    <Draggable id={backgroundImage.id}>
+                      <ImageCell id={backgroundImage.id} />
+                    </Draggable>
+                  </Deleteable>
+                </SquareBox>
+              ))}
           </DroppableImageGrid>
         </DndContext>
       </CardContent>
