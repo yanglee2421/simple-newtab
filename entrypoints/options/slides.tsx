@@ -38,17 +38,18 @@ const SortableItem = (props: SortableItemProps) => {
       {...attributes}
       {...listeners}
       sx={{
-        width: 30,
-        height: 30,
         borderWidth: 1,
         borderStyle: "solid",
         borderColor: (theme) => theme.palette.primary.main,
         borderRadius: (theme) => theme.shape.borderRadius,
-        padding: 6,
+
+        aspectRatio: "1/1",
 
         display: "flex",
-        justifyContent: "center",
         alignItems: "center",
+        justifyContent: "center",
+
+        fontSize: 36,
       }}
     >
       {props.id}
@@ -67,43 +68,49 @@ export const Component = () => {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   return (
     <>
       <ScrollToTopButton />
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={(event) => {
-          const { active, over } = event;
+      <Box sx={{ paddingBlock: 3 }}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(event) => {
+            const { active, over } = event;
 
-          if (!active) return;
-          if (!over) return;
-          if (active.id === over.id) return;
+            if (!active) return;
+            if (!over) return;
+            if (active.id === over.id) return;
 
-          setItems((items) => {
-            const oldIndex = items.indexOf(+active.id);
-            const newIndex = items.indexOf(+over.id);
+            setItems((items) => {
+              const oldIndex = items.indexOf(+active.id);
+              const newIndex = items.indexOf(+over.id);
 
-            return arrayMove(items, oldIndex, newIndex);
-          });
-        }}
-      >
-        <Box
-          sx={{ paddingBlock: 3, display: "flex", flexWrap: "wrap", gap: 1 }}
+              return arrayMove(items, oldIndex, newIndex);
+            });
+          }}
         >
-          <SortableContext
-            items={items}
-            strategy={horizontalListSortingStrategy}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(6,minmax(0,1fr))",
+              gap: 1,
+            }}
           >
-            {items.map((id) => (
-              <SortableItem key={id} id={id} />
-            ))}
-          </SortableContext>
-        </Box>
-      </DndContext>
+            <SortableContext
+              items={items}
+              strategy={horizontalListSortingStrategy}
+            >
+              {items.map((id) => (
+                <SortableItem key={id} id={id} />
+              ))}
+            </SortableContext>
+          </Box>
+        </DndContext>
+      </Box>
     </>
   );
 };

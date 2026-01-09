@@ -14,6 +14,7 @@ type Store = {
   preset: Preset;
   imageId: number;
   backgroundType: BackgroundType;
+  gallery: number[];
 };
 
 const syncStorage = {
@@ -37,6 +38,7 @@ const makeInitialValues = (): Store => {
     preset: "snow" as Preset,
     imageId: 1,
     backgroundType: "image",
+    gallery: [1, 2, 3, 4, 5, 6, 7, 8, 9],
   };
 };
 

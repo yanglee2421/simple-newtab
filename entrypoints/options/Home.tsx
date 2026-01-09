@@ -21,6 +21,22 @@ import {
 import { DeleteOutlined, FindInPageOutlined } from "@mui/icons-material";
 import React from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  useSortable,
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import { db } from "@/lib/db";
 import { ScrollToTopButton } from "@/components/scroll";
 import { devLog } from "@/lib/utils";
@@ -67,6 +83,7 @@ type ImageCellProps = {
   image: File;
   selected: boolean;
   id: number;
+  clickable?: boolean;
 };
 
 const ImageCell = (props: ImageCellProps) => {
@@ -121,6 +138,7 @@ const ImageCell = (props: ImageCellProps) => {
         ref={boxRef}
         component="div"
         onClick={() => {
+          if (!props.clickable) return;
           useSyncStore.setState((draft) => {
             draft.imageId = props.id;
           });
@@ -141,8 +159,9 @@ const ImageCell = (props: ImageCellProps) => {
           borderColor: (theme) => theme.palette.primary.main,
           borderStyle: "solid",
           borderWidth: props.selected ? 4 : 0,
-          cursor: "context-menu",
+          cursor: props.clickable ? "context-menu" : "default",
         }}
+        disableRipple={!props.clickable}
       >
         <StyleImg
           src={URL.createObjectURL(props.image)}
@@ -262,7 +281,6 @@ const ImagePanel = () => {
           onChange={(_, page) => {
             setPageIndex(page - 1);
           }}
-          variant="outlined"
         />
       </CardActions>
     </Card>
@@ -272,8 +290,77 @@ const ImagePanel = () => {
 const ColorPanel = () => {
   return (
     <Card>
-      <CardHeader title="纯色" />
-      <CardContent></CardContent>
+      <CardHeader title="纯色" action={<input type="color" />} />
+      <CardContent>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "repeat(2,minmax(0,1fr))",
+              sm: "repeat(3,minmax(0,1fr))",
+              md: "repeat(4,minmax(0,1fr))",
+              lg: "repeat(6,minmax(0,1fr))",
+              xl: "repeat(8,minmax(0,1fr))",
+            },
+            gap: 0.5,
+          }}
+        >
+          <ButtonBase
+            sx={{
+              backgroundColor: (theme) => theme.palette.primary.main,
+
+              aspectRatio: "1/1",
+              overflow: "hidden",
+              borderRadius: 1,
+            }}
+          ></ButtonBase>
+          <ButtonBase
+            sx={{
+              backgroundColor: (theme) => theme.palette.secondary.main,
+
+              aspectRatio: "1/1",
+              overflow: "hidden",
+              borderRadius: 1,
+            }}
+          ></ButtonBase>
+          <ButtonBase
+            sx={{
+              backgroundColor: (theme) => theme.palette.success.main,
+
+              aspectRatio: "1/1",
+              overflow: "hidden",
+              borderRadius: 1,
+            }}
+          ></ButtonBase>
+          <ButtonBase
+            sx={{
+              backgroundColor: (theme) => theme.palette.warning.main,
+
+              aspectRatio: "1/1",
+              overflow: "hidden",
+              borderRadius: 1,
+            }}
+          ></ButtonBase>
+          <ButtonBase
+            sx={{
+              backgroundColor: (theme) => theme.palette.error.main,
+
+              aspectRatio: "1/1",
+              overflow: "hidden",
+              borderRadius: 1,
+            }}
+          ></ButtonBase>
+          <ButtonBase
+            sx={{
+              backgroundColor: (theme) => theme.palette.info.main,
+
+              aspectRatio: "1/1",
+              overflow: "hidden",
+              borderRadius: 1,
+            }}
+          ></ButtonBase>
+        </Box>
+      </CardContent>
       <CardActions>
         <Pagination />
       </CardActions>
@@ -281,13 +368,272 @@ const ColorPanel = () => {
   );
 };
 
+const calculateIsHTMLElement = (el: unknown): el is HTMLElement => {
+  return el instanceof HTMLElement;
+};
+
+type SortableImageCellProps = {
+  id: number;
+};
+
+const SortableImageCell = (props: SortableImageCellProps) => {
+  const [inlineSize, setInlineSize] = React.useState(0);
+  const [blockSize, setBlockSize] = React.useState(0);
+  const [naturalWidth, setNaturalWidth] = React.useState(0);
+  const [naturalHeight, setNaturalHeight] = React.useState(0);
+
+  const boxRef = React.useRef<HTMLElement>(null);
+
+  const sortable = useSortable({
+    id: props.id,
+  });
+
+  const backgroundImage = useLiveQuery(() => {
+    return db.backgrounds.get(props.id);
+  });
+
+  React.useEffect(() => {
+    const el = boxRef.current;
+    devLog(false, el);
+
+    if (!el) return;
+
+    const observer = new ResizeObserver(
+      ([
+        {
+          contentBoxSize: [{ inlineSize, blockSize }],
+        },
+      ]) => {
+        setInlineSize(inlineSize);
+        setBlockSize(blockSize);
+      },
+    );
+    observer.observe(el);
+
+    return () => {
+      observer.unobserve(el);
+      observer.disconnect();
+    };
+  }, []);
+
+  const imageWidth = calculateImageWidth(
+    inlineSize,
+    naturalWidth,
+    naturalHeight,
+  );
+  const imageHeight = calculateImageHeight(
+    blockSize,
+    naturalWidth,
+    naturalHeight,
+  );
+
+  devLog(true, sortable.transform, sortable.transition);
+
+  return (
+    <Box
+      ref={(el) => {
+        const isHTMLEl = calculateIsHTMLElement(el);
+        if (!isHTMLEl) return;
+
+        sortable.setNodeRef(el);
+        boxRef.current = el;
+
+        return () => {
+          sortable.setNodeRef(null);
+          boxRef.current = null;
+        };
+      }}
+      sx={{
+        aspectRatio: "1/1",
+        overflow: "hidden",
+        borderRadius: 1,
+
+        position: "relative",
+      }}
+      component={"div"}
+      style={{
+        transform: CSS.Transform.toString(sortable.transform),
+        transition: sortable.transition,
+      }}
+      {...sortable.attributes}
+      {...sortable.listeners}
+    >
+      <StyleImg
+        src={backgroundImage ? URL.createObjectURL(backgroundImage.image) : ""}
+        alt=""
+        width={imageWidth || void 0}
+        height={imageHeight || void 0}
+        draggable={false}
+        onLoad={(e) => {
+          const { naturalWidth, naturalHeight } = e.currentTarget;
+
+          devLog(false, naturalWidth, naturalHeight);
+          setNaturalWidth(naturalWidth);
+          setNaturalHeight(naturalHeight);
+
+          URL.revokeObjectURL(e.currentTarget.src);
+        }}
+      />
+    </Box>
+  );
+};
+
+const DroppableImageGrid = (props: React.PropsWithChildren) => {
+  const droppable = useDroppable({
+    id: "image-grid",
+  });
+
+  return (
+    <Box
+      ref={(el) => {
+        const isHTMLEl = calculateIsHTMLElement(el);
+        if (!isHTMLEl) return;
+
+        droppable.setNodeRef(el);
+
+        return () => {
+          droppable.setNodeRef(null);
+        };
+      }}
+      sx={{
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "repeat(2,minmax(0,1fr))",
+          sm: "repeat(3,minmax(0,1fr))",
+          md: "repeat(4,minmax(0,1fr))",
+          lg: "repeat(6,minmax(0,1fr))",
+          xl: "repeat(8,minmax(0,1fr))",
+        },
+        gap: 0.5,
+      }}
+    >
+      {props.children}
+    </Box>
+  );
+};
+
+const DroppableGalleryGrid = (props: React.PropsWithChildren) => {
+  const droppable = useDroppable({
+    id: "gallery-grid",
+  });
+
+  const gallery = useSyncStore((store) => store.gallery);
+
+  return (
+    <Box
+      ref={(el) => {
+        const isHTMLEl = calculateIsHTMLElement(el);
+        if (!isHTMLEl) return;
+
+        droppable.setNodeRef(el);
+
+        return () => {
+          droppable.setNodeRef(null);
+        };
+      }}
+      sx={{
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "repeat(2,minmax(0,1fr))",
+          sm: "repeat(3,minmax(0,1fr))",
+          md: "repeat(4,minmax(0,1fr))",
+          lg: "repeat(6,minmax(0,1fr))",
+          xl: "repeat(8,minmax(0,1fr))",
+        },
+        gap: 0.5,
+      }}
+    >
+      <SortableContext items={gallery} strategy={horizontalListSortingStrategy}>
+        {props.children}
+      </SortableContext>
+    </Box>
+  );
+};
+
 const GalleryPanel = () => {
+  const [pageIndex, setPageIndex] = React.useState(0);
+  const [pageSize] = React.useState(24);
+
+  const fileInputId = React.useId();
+
+  const backgroundImages = useLiveQuery(() => {
+    return db.backgrounds
+      .offset(pageIndex * pageSize)
+      .limit(pageSize)
+      .toArray();
+  }, [pageIndex, pageSize]);
+
+  const count = useLiveQuery(() => {
+    return db.backgrounds.count();
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const gallery = useSyncStore((store) => store.gallery);
+  devLog(false, gallery);
+
   return (
     <Card>
-      <CardHeader title="幻灯片放映" />
-      <CardContent></CardContent>
+      <CardHeader
+        title="幻灯片放映"
+        action={
+          <IconButton component="label" htmlFor={fileInputId}>
+            <FindInPageOutlined />
+            <input
+              type="file"
+              id={fileInputId}
+              hidden
+              value=""
+              onChange={async (e) => {
+                const files = Array.from(e.target.files || []);
+                devLog(true, files);
+
+                for (const file of files) {
+                  await db.backgrounds.add({ image: file });
+                }
+              }}
+              accept="image/*"
+              multiple
+            />
+          </IconButton>
+        }
+      />
+      <CardContent>
+        <DndContext
+          onDragEnd={(e) => {
+            devLog(false, e);
+          }}
+          sensors={sensors}
+          collisionDetection={closestCenter}
+        >
+          <DroppableGalleryGrid>
+            {gallery?.map((id) => (
+              <SortableImageCell key={id} id={id} />
+            ))}
+          </DroppableGalleryGrid>
+          <DroppableImageGrid>
+            {backgroundImages?.map((backgroundImage) => (
+              <SortableImageCell
+                key={backgroundImage.id}
+                id={backgroundImage.id}
+              />
+            ))}
+          </DroppableImageGrid>
+        </DndContext>
+      </CardContent>
       <CardActions>
-        <Pagination />
+        <Pagination
+          page={pageIndex + 1}
+          count={calculatePageCount(count || 0, pageSize)}
+          onChange={(_, page) => {
+            setPageIndex(page - 1);
+          }}
+        />
       </CardActions>
     </Card>
   );
