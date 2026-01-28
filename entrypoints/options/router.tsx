@@ -20,7 +20,12 @@ import {
   SettingsOutlined,
   SlideshowOutlined,
 } from "@mui/icons-material";
-import { Container, IconButton, useTheme } from "@mui/material";
+import {
+  CircularProgress,
+  Container,
+  IconButton,
+  useTheme,
+} from "@mui/material";
 import React from "react";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
 import type { Navigation } from "@toolpad/core";
@@ -149,11 +154,27 @@ const RootRoute = () => {
   );
 };
 
+const RootHydrateFallback = () => {
+  return (
+    <>
+      <CircularProgress />
+    </>
+  );
+};
+
 const routes: RouteObject[] = [
   {
     id: "root",
     path: ":lang?",
     Component: RootRoute,
+    HydrateFallback: RootHydrateFallback,
+    loader: async () => {
+      await new Promise<void>((resolve) => {
+        useSyncStore.persist.onFinishHydration(() => {
+          resolve();
+        });
+      });
+    },
     children: [
       {
         index: true,

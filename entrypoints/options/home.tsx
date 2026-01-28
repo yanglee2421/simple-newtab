@@ -5,6 +5,7 @@ import {
   CardActions,
   CardContent,
   CardHeader,
+  Divider,
   Grid,
   IconButton,
   List,
@@ -17,15 +18,22 @@ import {
   Stack,
   styled,
   TextField,
+  Typography,
 } from "@mui/material";
-import { Add, Delete, FindInPageOutlined } from "@mui/icons-material";
+import {
+  Add,
+  Delete,
+  FindInPageOutlined,
+  PropaneSharp,
+} from "@mui/icons-material";
 import React from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  closestCenter,
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  UniqueIdentifier,
   useDraggable,
   useDroppable,
   useSensor,
@@ -38,10 +46,18 @@ import {
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
   arrayMove,
+  rectSwappingStrategy,
+  rectSortingStrategy,
 } from "@dnd-kit/sortable";
+import {
+  snapCenterToCursor,
+  restrictToFirstScrollableAncestor,
+} from "@dnd-kit/modifiers";
 import { db } from "@/lib/db";
 import { ScrollToTopButton } from "@/components/scroll";
 import { devLog } from "@/lib/utils";
+import { useResizeObserver } from "@/hooks/useResizeObserver";
+import { createPortal } from "react-dom";
 
 const calculatePageCount = (count: number, pageSize: number) => {
   return Math.ceil(count / pageSize);
@@ -71,6 +87,30 @@ const calculateImageHeight = (
   return blockSize;
 };
 
+const calculateIsHTMLEl = (el: unknown): el is HTMLElement => {
+  return el instanceof HTMLElement;
+};
+
+const calculateActiveWidth = (data: unknown) => {
+  const value = Reflect.get(Object(data), "width");
+
+  if (typeof value !== "number") {
+    return 0;
+  }
+
+  return value;
+};
+
+const calculateContainerId = (data: unknown) => {
+  const containerId = Reflect.get(Object(data), "containerId");
+
+  if (typeof containerId !== "string") {
+    return "";
+  }
+
+  return containerId;
+};
+
 const StyledImg = styled("img")({
   objectFit: "cover",
   objectPosition: "center",
@@ -91,38 +131,6 @@ const FullBox = styled("div")({
   inlineSize: "100%",
   blockSize: "100%",
 });
-
-const useResizeObserver = () => {
-  const [inlineSize, setInlineSize] = React.useState(0);
-  const [blockSize, setBlockSize] = React.useState(0);
-
-  const boxRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    const el = boxRef.current;
-    devLog(false, el);
-
-    if (!el) return;
-
-    const observer = new ResizeObserver(
-      ([
-        {
-          contentBoxSize: [{ inlineSize, blockSize }],
-        },
-      ]) => {
-        setInlineSize(inlineSize);
-        setBlockSize(blockSize);
-      },
-    );
-    observer.observe(el);
-
-    return () => {
-      observer.unobserve(el);
-      observer.disconnect();
-    };
-  }, []);
-
-  return { inlineSize, blockSize, boxRef };
-};
 
 type SelectableProps = React.PropsWithChildren & {
   selected: boolean;
@@ -212,6 +220,23 @@ const Deleteable = (props: DeleteableProps) => {
   );
 };
 
+const useObjectURL = (blob?: Blob) => {
+  const [url, setURL] = React.useState("");
+
+  React.useEffect(() => {
+    if (!blob) return;
+
+    const objectURL = URL.createObjectURL(blob);
+    setURL(objectURL);
+
+    return () => {
+      URL.revokeObjectURL(objectURL);
+    };
+  }, [blob]);
+
+  return url;
+};
+
 type ImageCellProps = {
   id: number;
 };
@@ -220,10 +245,16 @@ const ImageCell = (props: ImageCellProps) => {
   const [naturalWidth, setNaturalWidth] = React.useState(0);
   const [naturalHeight, setNaturalHeight] = React.useState(0);
 
-  const { boxRef, inlineSize, blockSize } = useResizeObserver();
+  const [boxRef, entry] = useResizeObserver<HTMLDivElement>();
+
+  const inlineSize = useResizeObserver.inlineSize(entry?.borderBoxSize);
+  const blockSize = useResizeObserver.blockSize(entry?.borderBoxSize);
+
   const background = useLiveQuery(() => {
     return db.backgrounds.get(props.id);
   }, [props.id]);
+
+  const url = useObjectURL(background?.image);
 
   const imageWidth = calculateImageWidth(
     inlineSize,
@@ -241,16 +272,15 @@ const ImageCell = (props: ImageCellProps) => {
       ref={boxRef}
       sx={{
         position: "relative",
-
         overflow: "hidden",
-
+        aspectRatio: "1/1",
         borderRadius: 1,
       }}
     >
       {background && (
         <StyledImg
-          src={URL.createObjectURL(background.image)}
-          alt=""
+          src={url}
+          alt={`background #${props.id}`}
           width={imageWidth || void 0}
           height={imageHeight || void 0}
           draggable={false}
@@ -365,21 +395,7 @@ const ColorPanel = () => {
   return (
     <Card>
       <CardHeader title="纯色" action={<input type="color" />} />
-      <CardContent>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "repeat(2,minmax(0,1fr))",
-              sm: "repeat(3,minmax(0,1fr))",
-              md: "repeat(4,minmax(0,1fr))",
-              lg: "repeat(6,minmax(0,1fr))",
-              xl: "repeat(8,minmax(0,1fr))",
-            },
-            gap: 0.5,
-          }}
-        ></Box>
-      </CardContent>
+      <CardContent></CardContent>
       <CardActions>
         <Pagination />
       </CardActions>
@@ -387,133 +403,123 @@ const ColorPanel = () => {
   );
 };
 
-// const calculateIsHTMLElement = (el: unknown): el is HTMLElement => {
-//   return el instanceof HTMLElement;
-// };
-
-type DraggableProps = React.PropsWithChildren & {
-  id: number;
+type ImageGridProps = {
+  children?: React.ReactNode;
 };
 
-const Draggable = (props: DraggableProps) => {
-  const draggable = useDraggable({
-    id: props.id,
-  });
-
+const ImageGrid = (props: ImageGridProps) => {
   return (
-    <FullBox
-      ref={(el) => {
-        draggable.setNodeRef(el);
-
-        return () => {
-          draggable.setNodeRef(null);
-        };
-      }}
+    <Box
       sx={{
-        position: "relative",
-        zIndex: 1000,
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "repeat(2,minmax(0,1fr))",
+          sm: "repeat(3,minmax(0,1fr))",
+          md: "repeat(4,minmax(0,1fr))",
+          lg: "repeat(6,minmax(0,1fr))",
+          xl: "repeat(8,minmax(0,1fr))",
+        },
+        gap: 1,
       }}
-      style={{
-        transform: CSS.Transform.toString({
-          scaleX: 1,
-          scaleY: 1,
-          x: draggable.transform?.x || 0,
-          y: draggable.transform?.y || 0,
-        }),
-      }}
-      {...draggable.attributes}
-      {...draggable.listeners}
     >
       {props.children}
-    </FullBox>
+    </Box>
   );
 };
 
-type SortableProps = React.PropsWithChildren & {
-  id: number;
+type DroppableWrapperProps = {
+  id: UniqueIdentifier;
+  children?: React.ReactNode;
 };
 
-const Sortable = (props: SortableProps) => {
-  const sortable = useSortable({
+const DroppableWrapper = (props: DroppableWrapperProps) => {
+  const droppable = useDroppable({
     id: props.id,
+    data: {
+      containerId: props.id,
+    },
   });
 
   return (
-    <Grid
-      size={{ xs: 6, sm: 4, md: 3, lg: 2, xl: 1 }}
-      sx={{
-        zIndex: sortable.isDragging ? (theme) => theme.zIndex.tooltip : "auto",
-      }}
+    <Box
       ref={(el) => {
+        const isHTMLEl = calculateIsHTMLEl(el);
+        if (!isHTMLEl) return;
+
+        droppable.setNodeRef(el);
+
+        return () => {
+          droppable.setNodeRef(null);
+        };
+      }}
+      sx={{
+        minHeight: 100,
+      }}
+    >
+      {props.children}
+    </Box>
+  );
+};
+
+type GalleryDragOverlayProps = {
+  children?: React.ReactNode;
+};
+
+const GalleryDragOverlay = (props: GalleryDragOverlayProps) => {
+  return createPortal(
+    <DragOverlay>{props.children}</DragOverlay>,
+    document.body,
+  );
+};
+
+type SortableWrapperProps = {
+  id: UniqueIdentifier;
+  containerId: UniqueIdentifier;
+  children?: React.ReactNode;
+};
+
+const SortableWrapper = (props: SortableWrapperProps) => {
+  const [ref, entry] = useResizeObserver();
+  const sortable = useSortable({
+    id: props.id,
+    data: {
+      width: useResizeObserver.inlineSize(entry?.borderBoxSize),
+      containerId: props.containerId,
+    },
+  });
+
+  return (
+    <Box
+      ref={(el) => {
+        const isHTMLEl = calculateIsHTMLEl(el);
+        if (!isHTMLEl) return;
+
+        ref.current = el;
         sortable.setNodeRef(el);
 
         return () => {
+          ref.current = null;
           sortable.setNodeRef(null);
         };
       }}
-      style={{
+      sx={{
         transform: CSS.Transform.toString(sortable.transform),
         transition: sortable.transition,
+        opacity: sortable.isDragging ? 0.25 : void 0,
       }}
       {...sortable.attributes}
       {...sortable.listeners}
     >
       {props.children}
-    </Grid>
-  );
-};
-
-const DroppableImageGrid = (props: React.PropsWithChildren) => {
-  const droppable = useDroppable({
-    id: "image-grid",
-  });
-
-  return (
-    <Grid
-      ref={(el) => {
-        droppable.setNodeRef(el);
-
-        return () => {
-          droppable.setNodeRef(null);
-        };
-      }}
-      container
-      spacing={2}
-    >
-      {props.children}
-    </Grid>
-  );
-};
-
-const DroppableGalleryGrid = (props: React.PropsWithChildren) => {
-  const droppable = useDroppable({
-    id: "gallery-grid",
-  });
-
-  const gallery = useSyncStore((store) => store.gallery);
-
-  return (
-    <Grid
-      ref={(el) => {
-        droppable.setNodeRef(el);
-
-        return () => {
-          droppable.setNodeRef(null);
-        };
-      }}
-      container
-      spacing={1}
-    >
-      <SortableContext items={gallery} strategy={horizontalListSortingStrategy}>
-        {props.children}
-      </SortableContext>
-    </Grid>
+    </Box>
   );
 };
 
 const GalleryPanel = () => {
   const [pageIndex, setPageIndex] = React.useState(0);
   const [pageSize] = React.useState(24);
+  const [activeId, setActiveId] = React.useState<UniqueIdentifier>(0);
+  const [width, setWidth] = React.useState(0);
 
   const fileInputId = React.useId();
 
@@ -536,7 +542,6 @@ const GalleryPanel = () => {
   );
 
   const gallery = useSyncStore((store) => store.gallery);
-  devLog(true, gallery);
 
   return (
     <Card>
@@ -565,51 +570,98 @@ const GalleryPanel = () => {
         }
       />
       <CardContent>
-        <DndContext
-          onDragEnd={(e) => {
-            devLog(true, e);
+        <Stack spacing={3}>
+          <DndContext
+            sensors={sensors}
+            modifiers={[snapCenterToCursor, restrictToFirstScrollableAncestor]}
+            onDragStart={({ active }) => {
+              setActiveId(active.id);
+              setWidth(calculateActiveWidth(active.data.current));
+            }}
+            onDragOver={({ active, over }) => {
+              devLog(true, active, over);
+              if (!over) return;
 
-            useSyncStore.setState((draft) => {
-              if (!e.over) return;
-              draft.gallery = arrayMove(
-                Array.from(new Set([...draft.gallery, e.active.id as number])),
-                draft.gallery.indexOf(e.active.id as number),
-                draft.gallery.indexOf(e.over.id as number),
-              );
-            });
-          }}
-          sensors={sensors}
-          collisionDetection={closestCenter}
-        >
-          <DroppableGalleryGrid>
-            {gallery?.map((id) => (
-              <Sortable key={id} id={id}>
-                <SquareBox>
-                  <ImageCell id={id} />
-                </SquareBox>
-              </Sortable>
-            ))}
-          </DroppableGalleryGrid>
-          <DroppableImageGrid>
-            {backgroundImages
-              ?.filter((backgroundImage) => {
-                return !gallery.includes(backgroundImage.id);
-              })
-              .map((backgroundImage) => (
-                <SquareBox key={backgroundImage.id}>
-                  <Deleteable
-                    onDelete={() => {
-                      db.backgrounds.delete(backgroundImage.id);
-                    }}
-                  >
-                    <Draggable id={backgroundImage.id}>
-                      <ImageCell id={backgroundImage.id} />
-                    </Draggable>
-                  </Deleteable>
-                </SquareBox>
-              ))}
-          </DroppableImageGrid>
-        </DndContext>
+              const activeContainer = calculateContainerId(active.data.current);
+              const overContainer = calculateContainerId(over.data.current);
+
+              if (!activeContainer) return;
+              if (!overContainer) return;
+
+              // Same container, only move element
+              if (activeContainer === overContainer) {
+                return;
+              }
+
+              // Cut element from activeContainer to overContainer
+              if (overContainer === "gallery") {
+                useSyncStore.setState((draft) => {
+                  draft.gallery = [...draft.gallery, +active.id];
+                });
+
+                return;
+              }
+
+              if (overContainer === "database") {
+                useSyncStore.setState((draft) => {
+                  draft.gallery = draft.gallery.filter(
+                    (id) => !Object.is(id, active.id),
+                  );
+                });
+
+                return;
+              }
+            }}
+            onDragEnd={() => {
+              setActiveId(0);
+            }}
+            onDragCancel={() => {
+              setActiveId(0);
+            }}
+          >
+            <DroppableWrapper id="gallery">
+              <ImageGrid>
+                <SortableContext items={gallery} strategy={rectSortingStrategy}>
+                  {gallery.map((id) => (
+                    <SortableWrapper key={id} id={id} containerId={"gallery"}>
+                      <ImageCell id={id} />
+                    </SortableWrapper>
+                  ))}
+                </SortableContext>
+              </ImageGrid>
+            </DroppableWrapper>
+            <Divider>Databse</Divider>
+            <DroppableWrapper id="database">
+              <ImageGrid>
+                <SortableContext
+                  items={backgroundImages || []}
+                  strategy={rectSortingStrategy}
+                >
+                  {backgroundImages
+                    ?.filter((el) => {
+                      return !gallery.includes(el.id);
+                    })
+                    .map((el) => (
+                      <SortableWrapper
+                        key={el.id}
+                        id={el.id}
+                        containerId={"database"}
+                      >
+                        <ImageCell id={el.id} />
+                      </SortableWrapper>
+                    ))}
+                </SortableContext>
+              </ImageGrid>
+            </DroppableWrapper>
+            <GalleryDragOverlay>
+              {!!activeId && (
+                <Box sx={{ width }}>
+                  <ImageCell id={+activeId} />
+                </Box>
+              )}
+            </GalleryDragOverlay>
+          </DndContext>
+        </Stack>
       </CardContent>
       <CardActions>
         <Pagination
@@ -624,7 +676,11 @@ const GalleryPanel = () => {
   );
 };
 
-const renderBackgroundTypePanel = (backgroundType: string) => {
+type BackgroundTypePanelProps = {
+  backgroundType: string;
+};
+
+const BackgroundTypePanel = ({ backgroundType }: BackgroundTypePanelProps) => {
   switch (backgroundType) {
     case "image":
       return <ImagePanel />;
@@ -687,7 +743,7 @@ export const Component = () => {
             </List>
           </CardContent>
         </Card>
-        {renderBackgroundTypePanel(backgroundType)}
+        <BackgroundTypePanel backgroundType={backgroundType} />
       </Stack>
     </>
   );

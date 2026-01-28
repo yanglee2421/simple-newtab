@@ -11,6 +11,10 @@ export default defineConfig({
     matches: ["*://*/*"],
     permissions: ["storage", "tabs"],
     name: "Simple Newtab",
+    content_security_policy: {
+      extension_pages:
+        "script-src 'self' http://localhost:8097/; object-src 'self'",
+    },
   },
   react: {
     vite: {

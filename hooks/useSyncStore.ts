@@ -54,7 +54,6 @@ export const useSyncStoreHasHydrated = () => {
   return React.useSyncExternalStore(
     (onStateChange) => useSyncStore.persist.onFinishHydration(onStateChange),
     () => useSyncStore.persist.hasHydrated(),
-    () => false,
   );
 };
 
