@@ -1,7 +1,7 @@
 import Dexie from "dexie";
 import type { EntityTable } from "dexie";
 
-type Background = {
+export type Background = {
   id: number;
   image: File;
 };

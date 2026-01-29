@@ -38,6 +38,8 @@ import {
 import { db } from "@/lib/db";
 import type { Preset } from "@/hooks/useSyncStore";
 import snowVillage from "./snowVillage.jpg";
+import { ObjectURLStore } from "@/lib/objectURL";
+import { devLog } from "@/lib/utils";
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
@@ -303,6 +305,31 @@ const Content = () => {
   );
 };
 
+const objectURLStore = new ObjectURLStore();
+
+const useObjectURL = (blob?: Blob) => {
+  return React.useSyncExternalStore(
+    (onStoreChange) => {
+      if (!blob) {
+        return Boolean;
+      }
+
+      objectURLStore.subscribe(blob, onStoreChange);
+
+      return () => {
+        objectURLStore.unsubscribe(blob, onStoreChange);
+      };
+    },
+    () => {
+      if (!blob) {
+        return "";
+      }
+
+      return objectURLStore.getSnapshot(blob);
+    },
+  );
+};
+
 const useCurrentBgHref = () => {
   const imageId = useSyncStore((s) => s.imageId);
 
@@ -310,11 +337,13 @@ const useCurrentBgHref = () => {
     return db.backgrounds.get(imageId);
   }, [imageId]);
 
-  if (!background) {
+  const objectURL = useObjectURL(background?.image);
+
+  if (!objectURL) {
     return snowVillageHref;
   }
 
-  return URL.createObjectURL(background.image);
+  return objectURL;
 };
 
 export const App = () => {
@@ -507,6 +536,7 @@ const span = 8;
 const columns = 12;
 const columnSpacing = 16;
 
-console.log(
+devLog(
+  false,
   (totalWidth * span) / columns - (columns - span) * (columnSpacing / columns),
 );

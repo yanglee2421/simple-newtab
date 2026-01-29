@@ -18,23 +18,19 @@ import {
   Stack,
   styled,
   TextField,
-  Typography,
 } from "@mui/material";
-import {
-  Add,
-  Delete,
-  FindInPageOutlined,
-  PropaneSharp,
-} from "@mui/icons-material";
+import { Add, Delete, FindInPageOutlined } from "@mui/icons-material";
 import React from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MeasuringStrategy,
+  MouseSensor,
   PointerSensor,
+  TouchSensor,
   UniqueIdentifier,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
@@ -43,21 +39,18 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   useSortable,
   SortableContext,
-  horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
   arrayMove,
-  rectSwappingStrategy,
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
-import {
-  snapCenterToCursor,
-  restrictToFirstScrollableAncestor,
-} from "@dnd-kit/modifiers";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { db } from "@/lib/db";
 import { ScrollToTopButton } from "@/components/scroll";
 import { devLog } from "@/lib/utils";
 import { useResizeObserver } from "@/hooks/useResizeObserver";
 import { createPortal } from "react-dom";
+import type { Background } from "@/lib/db";
+import { ObjectURLStore } from "@/lib/objectURL";
 
 const calculatePageCount = (count: number, pageSize: number) => {
   return Math.ceil(count / pageSize);
@@ -111,6 +104,16 @@ const calculateContainerId = (data: unknown) => {
   return containerId;
 };
 
+const calculateElementSrc = (data: unknown) => {
+  const elementSrc = Reflect.get(Object(data), "src");
+
+  if (typeof elementSrc !== "string") {
+    return "";
+  }
+
+  return elementSrc;
+};
+
 const StyledImg = styled("img")({
   objectFit: "cover",
   objectPosition: "center",
@@ -121,15 +124,21 @@ const StyledImg = styled("img")({
   zIndex: 0,
 
   translate: "-50% -50% -10px",
+
+  userSelect: "none",
 });
 
 const SquareBox = styled("div")({
   aspectRatio: "1/1",
+
+  userSelect: "none",
 });
 
 const FullBox = styled("div")({
   inlineSize: "100%",
   blockSize: "100%",
+
+  userSelect: "none",
 });
 
 type SelectableProps = React.PropsWithChildren & {
@@ -220,41 +229,21 @@ const Deleteable = (props: DeleteableProps) => {
   );
 };
 
-const useObjectURL = (blob?: Blob) => {
-  const [url, setURL] = React.useState("");
-
-  React.useEffect(() => {
-    if (!blob) return;
-
-    const objectURL = URL.createObjectURL(blob);
-    setURL(objectURL);
-
-    return () => {
-      URL.revokeObjectURL(objectURL);
-    };
-  }, [blob]);
-
-  return url;
-};
-
 type ImageCellProps = {
   id: number;
+  src: string;
 };
 
 const ImageCell = (props: ImageCellProps) => {
   const [naturalWidth, setNaturalWidth] = React.useState(0);
   const [naturalHeight, setNaturalHeight] = React.useState(0);
 
+  const timeRef = React.useRef(0);
+
   const [boxRef, entry] = useResizeObserver<HTMLDivElement>();
 
   const inlineSize = useResizeObserver.inlineSize(entry?.borderBoxSize);
   const blockSize = useResizeObserver.blockSize(entry?.borderBoxSize);
-
-  const background = useLiveQuery(() => {
-    return db.backgrounds.get(props.id);
-  }, [props.id]);
-
-  const url = useObjectURL(background?.image);
 
   const imageWidth = calculateImageWidth(
     inlineSize,
@@ -277,9 +266,9 @@ const ImageCell = (props: ImageCellProps) => {
         borderRadius: 1,
       }}
     >
-      {background && (
+      {!!props.src && (
         <StyledImg
-          src={url}
+          src={props.src}
           alt={`background #${props.id}`}
           width={imageWidth || void 0}
           height={imageHeight || void 0}
@@ -287,9 +276,11 @@ const ImageCell = (props: ImageCellProps) => {
           onLoad={(e) => {
             const { naturalWidth, naturalHeight } = e.currentTarget;
 
-            devLog(false, naturalWidth, naturalHeight);
-            setNaturalWidth(naturalWidth);
-            setNaturalHeight(naturalHeight);
+            cancelAnimationFrame(timeRef.current);
+            timeRef.current = requestAnimationFrame(() => {
+              setNaturalWidth(naturalWidth);
+              setNaturalHeight(naturalHeight);
+            });
           }}
         />
       )}
@@ -305,7 +296,7 @@ const ImagePanel = () => {
 
   const imageId = useSyncStore((s) => s.imageId);
 
-  const backgroundImages = useLiveQuery(() => {
+  const backgrounds = useLiveQuery(() => {
     return db.backgrounds
       .offset(pageIndex * pageSize)
       .limit(pageSize)
@@ -315,6 +306,8 @@ const ImagePanel = () => {
   const count = useLiveQuery(() => {
     return db.backgrounds.count();
   });
+
+  const backgroundImages = useObjectURL(backgrounds);
 
   return (
     <Card>
@@ -371,7 +364,10 @@ const ImagePanel = () => {
                     });
                   }}
                 >
-                  <ImageCell id={backgroundImage.id} />
+                  <ImageCell
+                    id={backgroundImage.id}
+                    src={backgroundImage.src}
+                  />
                 </Selectable>
               </Deleteable>
             </SquareBox>
@@ -403,29 +399,27 @@ const ColorPanel = () => {
   );
 };
 
-type ImageGridProps = {
-  children?: React.ReactNode;
-};
-
-const ImageGrid = (props: ImageGridProps) => {
-  return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: {
-          xs: "repeat(2,minmax(0,1fr))",
-          sm: "repeat(3,minmax(0,1fr))",
-          md: "repeat(4,minmax(0,1fr))",
-          lg: "repeat(6,minmax(0,1fr))",
-          xl: "repeat(8,minmax(0,1fr))",
-        },
-        gap: 1,
-      }}
-    >
-      {props.children}
-    </Box>
-  );
-};
+const ImageGrid = styled("div")(({ theme }) => {
+  return {
+    display: "grid",
+    gap: 12,
+    [theme.breakpoints.up("xs")]: {
+      gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+    },
+    [theme.breakpoints.up("sm")]: {
+      gridTemplateColumns: "repeat(3,minmax(0,1fr))",
+    },
+    [theme.breakpoints.up("md")]: {
+      gridTemplateColumns: "repeat(4,minmax(0,1fr))",
+    },
+    [theme.breakpoints.up("lg")]: {
+      gridTemplateColumns: "repeat(6,minmax(0,1fr))",
+    },
+    [theme.breakpoints.up("xl")]: {
+      gridTemplateColumns: "repeat(8,minmax(0,1fr))",
+    },
+  };
+});
 
 type DroppableWrapperProps = {
   id: UniqueIdentifier;
@@ -476,6 +470,7 @@ type SortableWrapperProps = {
   id: UniqueIdentifier;
   containerId: UniqueIdentifier;
   children?: React.ReactNode;
+  src: string;
 };
 
 const SortableWrapper = (props: SortableWrapperProps) => {
@@ -485,15 +480,13 @@ const SortableWrapper = (props: SortableWrapperProps) => {
     data: {
       width: useResizeObserver.inlineSize(entry?.borderBoxSize),
       containerId: props.containerId,
+      src: props.src,
     },
   });
 
   return (
-    <Box
+    <div
       ref={(el) => {
-        const isHTMLEl = calculateIsHTMLEl(el);
-        if (!isHTMLEl) return;
-
         ref.current = el;
         sortable.setNodeRef(el);
 
@@ -502,7 +495,7 @@ const SortableWrapper = (props: SortableWrapperProps) => {
           sortable.setNodeRef(null);
         };
       }}
-      sx={{
+      style={{
         transform: CSS.Transform.toString(sortable.transform),
         transition: sortable.transition,
         opacity: sortable.isDragging ? 0.25 : void 0,
@@ -511,7 +504,55 @@ const SortableWrapper = (props: SortableWrapperProps) => {
       {...sortable.listeners}
     >
       {props.children}
-    </Box>
+    </div>
+  );
+};
+
+const objectURLStore = new ObjectURLStore();
+
+const cacheMap = new WeakMap<
+  Background[],
+  Array<{
+    id: number;
+    src: string;
+  }>
+>();
+
+const useObjectURL = (backgrounds?: Background[]) => {
+  return React.useSyncExternalStore(
+    (onStoreChange) => {
+      backgrounds?.forEach((background) => {
+        objectURLStore.subscribe(background.image, onStoreChange);
+      });
+
+      return () => {
+        backgrounds?.forEach((background) => {
+          objectURLStore.unsubscribe(background.image, onStoreChange);
+        });
+      };
+    },
+    () => {
+      if (!backgrounds) {
+        return null;
+      }
+
+      const previousResult = cacheMap.get(backgrounds);
+
+      const result = backgrounds.map((background) => {
+        return {
+          id: background.id,
+          src: objectURLStore.getSnapshot(background.image),
+        };
+      });
+
+      if (Object.is(JSON.stringify(previousResult), JSON.stringify(result))) {
+        return previousResult;
+      }
+
+      cacheMap.set(backgrounds, result);
+
+      return result;
+    },
   );
 };
 
@@ -519,11 +560,12 @@ const GalleryPanel = () => {
   const [pageIndex, setPageIndex] = React.useState(0);
   const [pageSize] = React.useState(24);
   const [activeId, setActiveId] = React.useState<UniqueIdentifier>(0);
+  const [activeSrc, setActiveSrc] = React.useState("");
   const [width, setWidth] = React.useState(0);
 
   const fileInputId = React.useId();
 
-  const backgroundImages = useLiveQuery(() => {
+  const backgrounds = useLiveQuery(() => {
     return db.backgrounds
       .offset(pageIndex * pageSize)
       .limit(pageSize)
@@ -534,14 +576,26 @@ const GalleryPanel = () => {
     return db.backgrounds.count();
   });
 
+  const gallery = useSyncStore((store) => store.gallery);
+
+  const galleryBackgrounds = useLiveQuery(() => {
+    return db.backgrounds
+      .where("id")
+      .anyOf(...gallery)
+      .toArray();
+  }, [gallery]);
+
+  const backgroundImages = useObjectURL(backgrounds);
+  const galleryImages = useObjectURL(galleryBackgrounds);
+
   const sensors = useSensors(
+    useSensor(MouseSensor),
+    useSensor(TouchSensor),
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-
-  const gallery = useSyncStore((store) => store.gallery);
 
   return (
     <Card>
@@ -557,7 +611,6 @@ const GalleryPanel = () => {
               value=""
               onChange={async (e) => {
                 const files = Array.from(e.target.files || []);
-                devLog(true, files);
 
                 for (const file of files) {
                   await db.backgrounds.add({ image: file });
@@ -570,16 +623,22 @@ const GalleryPanel = () => {
         }
       />
       <CardContent>
-        <Stack spacing={3}>
+        <Stack spacing={0}>
           <DndContext
             sensors={sensors}
-            modifiers={[snapCenterToCursor, restrictToFirstScrollableAncestor]}
+            modifiers={[snapCenterToCursor]}
+            measuring={{
+              droppable: {
+                strategy: MeasuringStrategy.Always,
+              },
+            }}
             onDragStart={({ active }) => {
               setActiveId(active.id);
               setWidth(calculateActiveWidth(active.data.current));
+              setActiveSrc(calculateElementSrc(active.data.current));
             }}
             onDragOver={({ active, over }) => {
-              devLog(true, active, over);
+              devLog(false, active, over);
               if (!over) return;
 
               const activeContainer = calculateContainerId(active.data.current);
@@ -622,9 +681,14 @@ const GalleryPanel = () => {
             <DroppableWrapper id="gallery">
               <ImageGrid>
                 <SortableContext items={gallery} strategy={rectSortingStrategy}>
-                  {gallery.map((id) => (
-                    <SortableWrapper key={id} id={id} containerId={"gallery"}>
-                      <ImageCell id={id} />
+                  {galleryImages?.map((image) => (
+                    <SortableWrapper
+                      key={image.id}
+                      id={image.id}
+                      containerId={"gallery"}
+                      src={image.src}
+                    >
+                      <ImageCell id={image.id} src={image.src} />
                     </SortableWrapper>
                   ))}
                 </SortableContext>
@@ -638,16 +702,17 @@ const GalleryPanel = () => {
                   strategy={rectSortingStrategy}
                 >
                   {backgroundImages
-                    ?.filter((el) => {
-                      return !gallery.includes(el.id);
+                    ?.filter((image) => {
+                      return !gallery.includes(image.id);
                     })
-                    .map((el) => (
+                    .map((image) => (
                       <SortableWrapper
-                        key={el.id}
-                        id={el.id}
+                        key={image.id}
+                        id={image.id}
                         containerId={"database"}
+                        src={image.src}
                       >
-                        <ImageCell id={el.id} />
+                        <ImageCell id={image.id} src={image.src} />
                       </SortableWrapper>
                     ))}
                 </SortableContext>
@@ -656,7 +721,7 @@ const GalleryPanel = () => {
             <GalleryDragOverlay>
               {!!activeId && (
                 <Box sx={{ width }}>
-                  <ImageCell id={+activeId} />
+                  <ImageCell id={+activeId} src={activeSrc} />
                 </Box>
               )}
             </GalleryDragOverlay>

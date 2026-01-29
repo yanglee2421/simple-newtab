@@ -168,13 +168,7 @@ const routes: RouteObject[] = [
     path: ":lang?",
     Component: RootRoute,
     HydrateFallback: RootHydrateFallback,
-    loader: async () => {
-      await new Promise<void>((resolve) => {
-        useSyncStore.persist.onFinishHydration(() => {
-          resolve();
-        });
-      });
-    },
+    loader: async () => {},
     children: [
       {
         index: true,
