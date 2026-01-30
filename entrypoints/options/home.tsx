@@ -1,6 +1,5 @@
 import {
   Box,
-  ButtonBase,
   Card,
   CardActions,
   CardContent,
@@ -10,18 +9,13 @@ import {
   IconButton,
   List,
   ListItem,
-  ListItemIcon,
   ListItemText,
-  Menu,
   MenuItem,
   Pagination,
   Stack,
   styled,
   TextField,
 } from "@mui/material";
-import { Add, Delete, FindInPageOutlined } from "@mui/icons-material";
-import React from "react";
-import { useLiveQuery } from "dexie-react-hooks";
 import {
   DndContext,
   DragOverlay,
@@ -35,28 +29,25 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import {
   useSortable,
   SortableContext,
   sortableKeyboardCoordinates,
-  arrayMove,
   rectSortingStrategy,
+  arrayMove,
 } from "@dnd-kit/sortable";
-import { snapCenterToCursor } from "@dnd-kit/modifiers";
-import { db } from "@/lib/db";
-import { ScrollToTopButton } from "@/components/scroll";
-import { devLog } from "@/lib/utils";
-import { useResizeObserver } from "@/hooks/useResizeObserver";
+import React from "react";
 import { createPortal } from "react-dom";
-import type { Background } from "@/lib/db";
-import {
-  useBackgrounds,
-  useImageObjectURL,
-  useObjectURL,
-  objectURLStore,
-} from "@/hooks/useImageObjectURL";
-import { useQueryClient } from "@tanstack/react-query";
+import { CSS } from "@dnd-kit/utilities";
+import { Add } from "@mui/icons-material";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/db";
+import { devLog } from "@/lib/utils";
+import { ScrollToTopButton } from "@/components/scroll";
+import { useQueries } from "@tanstack/react-query";
+import { useBackground } from "@/hooks/useBackground";
+import type { IndexableTypeArray } from "dexie";
 
 const calculatePageCount = (count: number, pageSize: number) => {
   return Math.ceil(count / pageSize);
@@ -124,12 +115,6 @@ const StyledImg = styled("img")({
   userSelect: "none",
 });
 
-const SquareBox = styled("div")({
-  aspectRatio: "1/1",
-
-  userSelect: "none",
-});
-
 const FullBox = styled("div")({
   inlineSize: "100%",
   blockSize: "100%",
@@ -137,110 +122,18 @@ const FullBox = styled("div")({
   userSelect: "none",
 });
 
-type SelectableProps = React.PropsWithChildren & {
-  selected: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-};
-
-const Selectable = (props: SelectableProps) => {
-  if (props.disabled) {
-    return <FullBox>{props.children}</FullBox>;
-  }
-
-  return (
-    <ButtonBase
-      sx={{
-        inlineSize: "100%",
-        blockSize: "100%",
-
-        position: "relative",
-      }}
-      onClick={props.onClick}
-    >
-      {props.children}
-      {props.selected && (
-        <Box
-          sx={{
-            borderColor: (theme) => theme.palette.primary.main,
-            borderStyle: "solid",
-            borderWidth: 4,
-
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-          }}
-        ></Box>
-      )}
-    </ButtonBase>
-  );
-};
-
-type DeleteableProps = React.PropsWithChildren & {
-  onDelete: () => void;
-};
-
-const Deleteable = (props: DeleteableProps) => {
-  const [openMenu, setOpenMenu] = React.useState(false);
-  const [mouseX, setMouseX] = React.useState(0);
-  const [mouseY, setMouseY] = React.useState(0);
-
-  const handleMenuClose = () => {
-    setOpenMenu(false);
-  };
-
-  return (
-    <FullBox
-      onContextMenu={(e) => {
-        e.preventDefault();
-        setOpenMenu((prev) => !prev);
-        setMouseX(e.clientX);
-        setMouseY(e.clientY);
-      }}
-    >
-      {props.children}
-      <Menu
-        anchorReference="anchorPosition"
-        anchorPosition={{
-          top: mouseY,
-          left: mouseX,
-        }}
-        open={openMenu}
-        onClose={handleMenuClose}
-      >
-        <MenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleMenuClose();
-            props.onDelete();
-          }}
-        >
-          <ListItemIcon>
-            <Delete fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
-        </MenuItem>
-      </Menu>
-    </FullBox>
-  );
-};
-
 type ImageCellProps = {
   id: number;
 };
 
 const ImageCell = (props: ImageCellProps) => {
-  const [naturalWidth, setNaturalWidth] = React.useState(0);
-  const [naturalHeight, setNaturalHeight] = React.useState(0);
+  const [boxRef, inlineSize, blockSize] = useBorderBoxSize<HTMLDivElement>();
+  const background = useBackground(props.id);
+  const imageHref = useObjectURL(background.data?.file);
 
-  const timeRef = React.useRef(0);
-
-  const [boxRef, entry] = useResizeObserver<HTMLDivElement>();
-  const query = useImageObjectURL(props.id);
-  const url = useObjectURL(query.data?.image);
-
-  const inlineSize = useResizeObserver.inlineSize(entry?.borderBoxSize);
-  const blockSize = useResizeObserver.blockSize(entry?.borderBoxSize);
+  const isShowImage = !!imageHref;
+  const naturalWidth = background.data?.width || 0;
+  const naturalHeight = background.data?.height || 0;
 
   const imageWidth = calculateImageWidth(
     inlineSize,
@@ -263,112 +156,16 @@ const ImageCell = (props: ImageCellProps) => {
         borderRadius: 1,
       }}
     >
-      {!!url && (
+      {isShowImage && (
         <StyledImg
-          src={url}
+          src={imageHref}
           alt={`background #${props.id}`}
           width={imageWidth || void 0}
           height={imageHeight || void 0}
           draggable={false}
-          onLoad={(e) => {
-            const { naturalWidth, naturalHeight } = e.currentTarget;
-
-            cancelAnimationFrame(timeRef.current);
-            timeRef.current = requestAnimationFrame(() => {
-              setNaturalWidth(naturalWidth);
-              setNaturalHeight(naturalHeight);
-            });
-          }}
         />
       )}
     </FullBox>
-  );
-};
-
-const ImagePanel = () => {
-  const [pageIndex, setPageIndex] = React.useState(0);
-  const [pageSize] = React.useState(24);
-
-  const fileInputId = React.useId();
-
-  const imageId = useSyncStore((s) => s.imageId);
-  const backgrounds = useBackgrounds(pageIndex, pageSize);
-  const count = useLiveQuery(() => {
-    return db.backgrounds.count();
-  });
-
-  return (
-    <Card>
-      <CardHeader
-        title="图片"
-        action={
-          <IconButton component="label" htmlFor={fileInputId}>
-            <FindInPageOutlined />
-            <input
-              type="file"
-              id={fileInputId}
-              hidden
-              value=""
-              onChange={async (e) => {
-                const file = e.target.files?.item(0);
-                if (!file) return;
-
-                const imageId = await db.backgrounds.add({ image: file });
-                useSyncStore.setState((draft) => {
-                  draft.imageId = imageId;
-                });
-              }}
-              accept="image/*"
-            />
-          </IconButton>
-        }
-      />
-      <CardContent>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "repeat(2,minmax(0,1fr))",
-              sm: "repeat(3,minmax(0,1fr))",
-              md: "repeat(4,minmax(0,1fr))",
-              lg: "repeat(6,minmax(0,1fr))",
-              xl: "repeat(8,minmax(0,1fr))",
-            },
-            gap: 0.5,
-          }}
-        >
-          {backgrounds?.map((backgroundImage) => (
-            <SquareBox key={backgroundImage.id}>
-              <Deleteable
-                onDelete={() => {
-                  db.backgrounds.delete(backgroundImage.id);
-                }}
-              >
-                <Selectable
-                  selected={Object.is(imageId, backgroundImage.id)}
-                  onClick={() => {
-                    useSyncStore.setState((draft) => {
-                      draft.imageId = backgroundImage.id;
-                    });
-                  }}
-                >
-                  <ImageCell id={backgroundImage.id} />
-                </Selectable>
-              </Deleteable>
-            </SquareBox>
-          ))}
-        </Box>
-      </CardContent>
-      <CardActions>
-        <Pagination
-          page={pageIndex + 1}
-          count={calculatePageCount(count || 0, pageSize)}
-          onChange={(_, page) => {
-            setPageIndex(page - 1);
-          }}
-        />
-      </CardActions>
-    </Card>
   );
 };
 
@@ -387,7 +184,7 @@ const ColorPanel = () => {
 const ImageGrid = styled("div")(({ theme }) => {
   return {
     display: "grid",
-    gap: 12,
+    gap: 4,
     [theme.breakpoints.up("xs")]: {
       gridTemplateColumns: "repeat(2,minmax(0,1fr))",
     },
@@ -491,28 +288,37 @@ const SortableWrapper = (props: SortableWrapperProps) => {
   );
 };
 
+const calcualtePaginationIds = (
+  gallery: number[],
+  keys?: IndexableTypeArray,
+) => {
+  if (!Array.isArray(keys)) {
+    return [];
+  }
+
+  const result = keys.filter((id): id is number => {
+    const isNumber = typeof id === "number";
+
+    if (!isNumber) {
+      return false;
+    }
+
+    return !gallery.includes(id);
+  });
+
+  return result;
+};
+
+const databaseIdsInitializer = (): number[] => [];
+
 const GalleryPanel = () => {
   const [pageIndex, setPageIndex] = React.useState(0);
   const [pageSize] = React.useState(24);
   const [activeId, setActiveId] = React.useState<UniqueIdentifier>(0);
   const [width, setWidth] = React.useState(0);
+  const [databaseIds, setDatabaseIds] = React.useState(databaseIdsInitializer);
 
   const fileInputId = React.useId();
-
-  const backgrounds = useBackgrounds(pageIndex, pageSize);
-
-  const count = useLiveQuery(() => {
-    return db.backgrounds.count();
-  });
-
-  const gallery = useSyncStore((store) => store.gallery);
-
-  const galleryBackgrounds = useLiveQuery(() => {
-    return db.backgrounds
-      .where("id")
-      .anyOf(...gallery)
-      .toArray();
-  }, [gallery]);
 
   const sensors = useSensors(
     useSensor(MouseSensor),
@@ -523,48 +329,67 @@ const GalleryPanel = () => {
     }),
   );
 
-  const queryClient = useQueryClient();
+  const gallery = useSyncStore((store) => store.gallery);
 
-  const onGalleryBackgroundsChange = React.useEffectEvent(
-    (galleryBackgrounds: Background[]) => {
-      galleryBackgrounds.forEach((background) => {
-        queryClient.setQueryData(
-          ["database", "backgrounds", background.id],
-          background,
-        );
-      });
-    },
-  );
+  const count = useLiveQuery(() => {
+    return db.backgrounds.count();
+  });
+
+  const paginationKeys = useLiveQuery(() => {
+    return db.backgrounds
+      .offset(pageIndex * pageSize)
+      .limit(pageSize)
+      .keys();
+  }, [pageIndex, pageSize]);
+
+  const paginationIds = calcualtePaginationIds(gallery, paginationKeys);
+  const ids = Array.from(new Set(databaseIds.concat(paginationIds)));
+
+  const queries = useQueries({
+    queries: Array.from(new Set(paginationIds.concat(gallery)), (id) => {
+      return {
+        queryKey: ["database", "backgrounds", id],
+        queryFn: async () => {
+          const background = await db.backgrounds.get(+id);
+
+          if (!background) {
+            throw new Error(`#${id} background not found`);
+          }
+
+          const bitmap = await createImageBitmap(background.image);
+          const width = bitmap.width;
+          const height = bitmap.height;
+
+          bitmap.close();
+
+          return {
+            id: background.id,
+            file: background.image,
+            width,
+            height,
+          };
+        },
+      };
+    }),
+  });
+
+  const objectURLStore = React.use(ObjectURLContext);
 
   React.useEffect(() => {
-    if (!galleryBackgrounds) return;
-
-    onGalleryBackgroundsChange(galleryBackgrounds);
-
-    galleryBackgrounds.forEach((background) => {
-      objectURLStore.subscribe(background.image, Boolean);
+    queries.forEach((query) => {
+      if (query.isSuccess) {
+        objectURLStore.subscribe(query.data.file, Boolean);
+      }
     });
 
     return () => {
-      galleryBackgrounds.forEach((background) => {
-        objectURLStore.unsubscribe(background.image, Boolean);
+      queries.forEach((query) => {
+        if (query.isSuccess) {
+          objectURLStore.unsubscribe(query.data.file, Boolean);
+        }
       });
     };
-  }, [galleryBackgrounds]);
-
-  React.useEffect(() => {
-    if (!backgrounds) return;
-
-    backgrounds.forEach((background) => {
-      objectURLStore.subscribe(background.image, Boolean);
-    });
-
-    return () => {
-      backgrounds.forEach((background) => {
-        objectURLStore.unsubscribe(background.image, Boolean);
-      });
-    };
-  }, [backgrounds]);
+  }, [queries, objectURLStore]);
 
   return (
     <Card>
@@ -639,8 +464,26 @@ const GalleryPanel = () => {
                 return;
               }
             }}
-            onDragEnd={() => {
+            onDragEnd={({ active, over }) => {
               setActiveId(0);
+
+              if (!over) return;
+
+              const activeContainer = calculateContainerId(active.data.current);
+
+              if (activeContainer === "gallery") {
+                useSyncStore.setState((draft) => {
+                  const formIndex = draft.gallery.indexOf(+active.id);
+                  const toIndex = draft.gallery.indexOf(+over.id);
+                  draft.gallery = arrayMove(draft.gallery, formIndex, toIndex);
+                });
+              }
+
+              if (activeContainer === "database") {
+                const formIndex = ids.indexOf(+active.id);
+                const toIndex = ids.indexOf(+over.id);
+                setDatabaseIds(arrayMove(ids, formIndex, toIndex));
+              }
             }}
             onDragCancel={() => {
               setActiveId(0);
@@ -664,33 +507,12 @@ const GalleryPanel = () => {
             <Divider>Databse</Divider>
             <DroppableWrapper id="database">
               <ImageGrid>
-                <SortableContext
-                  items={
-                    backgrounds?.filter((image) => {
-                      return !gallery.includes(image.id);
-                    }) || []
-                  }
-                  strategy={rectSortingStrategy}
-                >
-                  {backgrounds
-                    ?.filter((image) => {
-                      return !gallery.includes(image.id);
-                    })
-                    .map((image) => (
-                      <SortableWrapper
-                        key={image.id}
-                        id={image.id}
-                        containerId={"database"}
-                      >
-                        <Deleteable
-                          onDelete={() => {
-                            db.backgrounds.delete(image.id);
-                          }}
-                        >
-                          <ImageCell id={image.id} />
-                        </Deleteable>
-                      </SortableWrapper>
-                    ))}
+                <SortableContext items={ids} strategy={rectSortingStrategy}>
+                  {ids.map((id) => (
+                    <SortableWrapper key={id} id={id} containerId={"database"}>
+                      <ImageCell id={id} />
+                    </SortableWrapper>
+                  ))}
                 </SortableContext>
               </ImageGrid>
             </DroppableWrapper>
@@ -723,14 +545,11 @@ type BackgroundTypePanelProps = {
 
 const BackgroundTypePanel = ({ backgroundType }: BackgroundTypePanelProps) => {
   switch (backgroundType) {
-    case "image":
-      return <ImagePanel />;
     case "color":
       return <ColorPanel />;
     case "gallery":
-      return <GalleryPanel />;
     default:
-      return null;
+      return <GalleryPanel />;
   }
 };
 
@@ -770,9 +589,8 @@ export const Component = () => {
                     size="small"
                     sx={{ minInlineSize: 160 }}
                   >
-                    <MenuItem value="image">图片</MenuItem>
                     <MenuItem value="color">纯色</MenuItem>
-                    <MenuItem value="gallery">幻灯片</MenuItem>
+                    <MenuItem value="gallery">图片</MenuItem>
                   </TextField>
                 }
               >
@@ -788,4 +606,42 @@ export const Component = () => {
       </Stack>
     </>
   );
+};
+
+const useBorderBoxSize = <TEl extends Element>() => {
+  const [inlineSize, setInlineSize] = React.useState(0);
+  const [blockSize, setBlockSize] = React.useState(0);
+
+  const animationIdRef = React.useRef(0);
+  const ref = React.useRef<TEl>(null);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(
+      ([
+        {
+          borderBoxSize: [{ inlineSize, blockSize }],
+        },
+      ]) => {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = requestAnimationFrame(() => {
+          React.startTransition(() => {
+            setInlineSize(Math.floor(inlineSize));
+            setBlockSize(Math.floor(blockSize));
+          });
+        });
+      },
+    );
+
+    observer.observe(el);
+
+    return () => {
+      observer.unobserve(el);
+      observer.disconnect();
+    };
+  }, []);
+
+  return [ref, inlineSize, blockSize] as const;
 };
