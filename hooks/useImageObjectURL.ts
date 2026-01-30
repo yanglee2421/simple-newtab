@@ -20,7 +20,7 @@ export const useImageObjectURL = (id: number) => {
   });
 };
 
-export const useXX = (pageIndex: number, pageSize: number) => {
+export const useBackgrounds = (pageIndex: number, pageSize: number) => {
   const queryClient = useQueryClient();
 
   const backgrounds = useLiveQuery(() => {
@@ -46,9 +46,11 @@ export const useXX = (pageIndex: number, pageSize: number) => {
 
     onBackgroundsChange(backgrounds);
   }, [backgrounds]);
+
+  return backgrounds;
 };
 
-const objectURLStore = new ObjectURLStore();
+export const objectURLStore = new ObjectURLStore();
 
 export const useObjectURL = (blob?: Blob) => {
   return React.useSyncExternalStore(

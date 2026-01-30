@@ -50,7 +50,13 @@ import { devLog } from "@/lib/utils";
 import { useResizeObserver } from "@/hooks/useResizeObserver";
 import { createPortal } from "react-dom";
 import type { Background } from "@/lib/db";
-import { ObjectURLStore } from "@/lib/objectURL";
+import {
+  useBackgrounds,
+  useImageObjectURL,
+  useObjectURL,
+  objectURLStore,
+} from "@/hooks/useImageObjectURL";
+import { useQueryClient } from "@tanstack/react-query";
 
 const calculatePageCount = (count: number, pageSize: number) => {
   return Math.ceil(count / pageSize);
@@ -102,16 +108,6 @@ const calculateContainerId = (data: unknown) => {
   }
 
   return containerId;
-};
-
-const calculateElementSrc = (data: unknown) => {
-  const elementSrc = Reflect.get(Object(data), "src");
-
-  if (typeof elementSrc !== "string") {
-    return "";
-  }
-
-  return elementSrc;
 };
 
 const StyledImg = styled("img")({
@@ -231,7 +227,6 @@ const Deleteable = (props: DeleteableProps) => {
 
 type ImageCellProps = {
   id: number;
-  src: string;
 };
 
 const ImageCell = (props: ImageCellProps) => {
@@ -241,6 +236,8 @@ const ImageCell = (props: ImageCellProps) => {
   const timeRef = React.useRef(0);
 
   const [boxRef, entry] = useResizeObserver<HTMLDivElement>();
+  const query = useImageObjectURL(props.id);
+  const url = useObjectURL(query.data?.image);
 
   const inlineSize = useResizeObserver.inlineSize(entry?.borderBoxSize);
   const blockSize = useResizeObserver.blockSize(entry?.borderBoxSize);
@@ -266,9 +263,9 @@ const ImageCell = (props: ImageCellProps) => {
         borderRadius: 1,
       }}
     >
-      {!!props.src && (
+      {!!url && (
         <StyledImg
-          src={props.src}
+          src={url}
           alt={`background #${props.id}`}
           width={imageWidth || void 0}
           height={imageHeight || void 0}
@@ -295,19 +292,10 @@ const ImagePanel = () => {
   const fileInputId = React.useId();
 
   const imageId = useSyncStore((s) => s.imageId);
-
-  const backgrounds = useLiveQuery(() => {
-    return db.backgrounds
-      .offset(pageIndex * pageSize)
-      .limit(pageSize)
-      .toArray();
-  }, [pageIndex, pageSize]);
-
+  const backgrounds = useBackgrounds(pageIndex, pageSize);
   const count = useLiveQuery(() => {
     return db.backgrounds.count();
   });
-
-  const backgroundImages = useObjectURL(backgrounds);
 
   return (
     <Card>
@@ -349,7 +337,7 @@ const ImagePanel = () => {
             gap: 0.5,
           }}
         >
-          {backgroundImages?.map((backgroundImage) => (
+          {backgrounds?.map((backgroundImage) => (
             <SquareBox key={backgroundImage.id}>
               <Deleteable
                 onDelete={() => {
@@ -364,10 +352,7 @@ const ImagePanel = () => {
                     });
                   }}
                 >
-                  <ImageCell
-                    id={backgroundImage.id}
-                    src={backgroundImage.src}
-                  />
+                  <ImageCell id={backgroundImage.id} />
                 </Selectable>
               </Deleteable>
             </SquareBox>
@@ -470,7 +455,6 @@ type SortableWrapperProps = {
   id: UniqueIdentifier;
   containerId: UniqueIdentifier;
   children?: React.ReactNode;
-  src: string;
 };
 
 const SortableWrapper = (props: SortableWrapperProps) => {
@@ -480,7 +464,6 @@ const SortableWrapper = (props: SortableWrapperProps) => {
     data: {
       width: useResizeObserver.inlineSize(entry?.borderBoxSize),
       containerId: props.containerId,
-      src: props.src,
     },
   });
 
@@ -508,69 +491,15 @@ const SortableWrapper = (props: SortableWrapperProps) => {
   );
 };
 
-const objectURLStore = new ObjectURLStore();
-
-const cacheMap = new WeakMap<
-  Background[],
-  Array<{
-    id: number;
-    src: string;
-  }>
->();
-
-const useObjectURL = (backgrounds?: Background[]) => {
-  return React.useSyncExternalStore(
-    (onStoreChange) => {
-      backgrounds?.forEach((background) => {
-        objectURLStore.subscribe(background.image, onStoreChange);
-      });
-
-      return () => {
-        backgrounds?.forEach((background) => {
-          objectURLStore.unsubscribe(background.image, onStoreChange);
-        });
-      };
-    },
-    () => {
-      if (!backgrounds) {
-        return null;
-      }
-
-      const previousResult = cacheMap.get(backgrounds) || null;
-
-      const result = backgrounds.map((background) => {
-        return {
-          id: background.id,
-          src: objectURLStore.getSnapshot(background.image),
-        };
-      });
-
-      if (Object.is(JSON.stringify(previousResult), JSON.stringify(result))) {
-        return previousResult;
-      }
-
-      cacheMap.set(backgrounds, result);
-
-      return result;
-    },
-  );
-};
-
 const GalleryPanel = () => {
   const [pageIndex, setPageIndex] = React.useState(0);
   const [pageSize] = React.useState(24);
   const [activeId, setActiveId] = React.useState<UniqueIdentifier>(0);
-  const [activeSrc, setActiveSrc] = React.useState("");
   const [width, setWidth] = React.useState(0);
 
   const fileInputId = React.useId();
 
-  const backgrounds = useLiveQuery(() => {
-    return db.backgrounds
-      .offset(pageIndex * pageSize)
-      .limit(pageSize)
-      .toArray();
-  }, [pageIndex, pageSize]);
+  const backgrounds = useBackgrounds(pageIndex, pageSize);
 
   const count = useLiveQuery(() => {
     return db.backgrounds.count();
@@ -585,9 +514,6 @@ const GalleryPanel = () => {
       .toArray();
   }, [gallery]);
 
-  const backgroundImages = useObjectURL(backgrounds);
-  const galleryImages = useObjectURL(galleryBackgrounds);
-
   const sensors = useSensors(
     useSensor(MouseSensor),
     useSensor(TouchSensor),
@@ -596,6 +522,49 @@ const GalleryPanel = () => {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  const queryClient = useQueryClient();
+
+  const onGalleryBackgroundsChange = React.useEffectEvent(
+    (galleryBackgrounds: Background[]) => {
+      galleryBackgrounds.forEach((background) => {
+        queryClient.setQueryData(
+          ["database", "backgrounds", background.id],
+          background,
+        );
+      });
+    },
+  );
+
+  React.useEffect(() => {
+    if (!galleryBackgrounds) return;
+
+    onGalleryBackgroundsChange(galleryBackgrounds);
+
+    galleryBackgrounds.forEach((background) => {
+      objectURLStore.subscribe(background.image, Boolean);
+    });
+
+    return () => {
+      galleryBackgrounds.forEach((background) => {
+        objectURLStore.unsubscribe(background.image, Boolean);
+      });
+    };
+  }, [galleryBackgrounds]);
+
+  React.useEffect(() => {
+    if (!backgrounds) return;
+
+    backgrounds.forEach((background) => {
+      objectURLStore.subscribe(background.image, Boolean);
+    });
+
+    return () => {
+      backgrounds.forEach((background) => {
+        objectURLStore.unsubscribe(background.image, Boolean);
+      });
+    };
+  }, [backgrounds]);
 
   return (
     <Card>
@@ -635,7 +604,6 @@ const GalleryPanel = () => {
             onDragStart={({ active }) => {
               setActiveId(active.id);
               setWidth(calculateActiveWidth(active.data.current));
-              setActiveSrc(calculateElementSrc(active.data.current));
             }}
             onDragOver={({ active, over }) => {
               devLog(false, active, over);
@@ -681,14 +649,13 @@ const GalleryPanel = () => {
             <DroppableWrapper id="gallery">
               <ImageGrid>
                 <SortableContext items={gallery} strategy={rectSortingStrategy}>
-                  {galleryImages?.map((image) => (
+                  {gallery?.map((image) => (
                     <SortableWrapper
-                      key={image.id}
-                      id={image.id}
+                      key={image}
+                      id={image}
                       containerId={"gallery"}
-                      src={image.src}
                     >
-                      <ImageCell id={image.id} src={image.src} />
+                      <ImageCell id={image} />
                     </SortableWrapper>
                   ))}
                 </SortableContext>
@@ -699,13 +666,13 @@ const GalleryPanel = () => {
               <ImageGrid>
                 <SortableContext
                   items={
-                    backgroundImages?.filter((image) => {
+                    backgrounds?.filter((image) => {
                       return !gallery.includes(image.id);
                     }) || []
                   }
                   strategy={rectSortingStrategy}
                 >
-                  {backgroundImages
+                  {backgrounds
                     ?.filter((image) => {
                       return !gallery.includes(image.id);
                     })
@@ -714,14 +681,13 @@ const GalleryPanel = () => {
                         key={image.id}
                         id={image.id}
                         containerId={"database"}
-                        src={image.src}
                       >
                         <Deleteable
                           onDelete={() => {
                             db.backgrounds.delete(image.id);
                           }}
                         >
-                          <ImageCell id={image.id} src={image.src} />
+                          <ImageCell id={image.id} />
                         </Deleteable>
                       </SortableWrapper>
                     ))}
@@ -731,7 +697,7 @@ const GalleryPanel = () => {
             <GalleryDragOverlay>
               {!!activeId && (
                 <Box sx={{ width }}>
-                  <ImageCell id={+activeId} src={activeSrc} />
+                  <ImageCell id={+activeId} />
                 </Box>
               )}
             </GalleryDragOverlay>
