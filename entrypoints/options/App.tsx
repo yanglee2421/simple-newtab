@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { browser } from "wxt/browser";
 import { MuiProvider } from "@/components/MuiProvider";
+import { QueryProvider } from "@/components/query";
 import { OptionsRouter } from "./router";
 
 const calculateLocale = (language: string) => {
@@ -19,8 +20,10 @@ z.config(Reflect.get(z.locales, calculateLocale(language))?.());
 
 export const App = () => {
   return (
-    <MuiProvider>
-      <OptionsRouter />
-    </MuiProvider>
+    <QueryProvider>
+      <MuiProvider>
+        <OptionsRouter />
+      </MuiProvider>
+    </QueryProvider>
   );
 };

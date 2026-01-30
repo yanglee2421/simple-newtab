@@ -536,7 +536,7 @@ const useObjectURL = (backgrounds?: Background[]) => {
         return null;
       }
 
-      const previousResult = cacheMap.get(backgrounds);
+      const previousResult = cacheMap.get(backgrounds) || null;
 
       const result = backgrounds.map((background) => {
         return {
@@ -698,7 +698,11 @@ const GalleryPanel = () => {
             <DroppableWrapper id="database">
               <ImageGrid>
                 <SortableContext
-                  items={backgroundImages || []}
+                  items={
+                    backgroundImages?.filter((image) => {
+                      return !gallery.includes(image.id);
+                    }) || []
+                  }
                   strategy={rectSortingStrategy}
                 >
                   {backgroundImages
@@ -712,7 +716,13 @@ const GalleryPanel = () => {
                         containerId={"database"}
                         src={image.src}
                       >
-                        <ImageCell id={image.id} src={image.src} />
+                        <Deleteable
+                          onDelete={() => {
+                            db.backgrounds.delete(image.id);
+                          }}
+                        >
+                          <ImageCell id={image.id} src={image.src} />
+                        </Deleteable>
                       </SortableWrapper>
                     ))}
                 </SortableContext>
