@@ -428,7 +428,6 @@ const GalleryPanel = () => {
               setWidth(calculateActiveWidth(active.data.current));
             }}
             onDragOver={({ active, over }) => {
-              devLog(false, active, over);
               if (!over) return;
 
               const activeContainer = calculateContainerId(active.data.current);
@@ -470,11 +469,17 @@ const GalleryPanel = () => {
               if (!over) return;
 
               const activeContainer = calculateContainerId(active.data.current);
+              const overContainer = calculateContainerId(over.data.current);
+
+              if (activeContainer !== overContainer) {
+                return;
+              }
 
               if (activeContainer === "gallery") {
                 useSyncStore.setState((draft) => {
                   const formIndex = draft.gallery.indexOf(+active.id);
                   const toIndex = draft.gallery.indexOf(+over.id);
+
                   draft.gallery = arrayMove(draft.gallery, formIndex, toIndex);
                 });
               }
@@ -482,7 +487,9 @@ const GalleryPanel = () => {
               if (activeContainer === "database") {
                 const formIndex = paginationIds.indexOf(+active.id);
                 const toIndex = paginationIds.indexOf(+over.id);
-                setDatabaseIds(arrayMove(paginationIds, formIndex, toIndex));
+                const sortResult = arrayMove(paginationIds, formIndex, toIndex);
+
+                setDatabaseIds(sortResult);
               }
             }}
             onDragCancel={() => {
