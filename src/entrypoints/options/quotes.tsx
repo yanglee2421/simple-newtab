@@ -29,7 +29,7 @@ import { z } from "zod";
 import React from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createFormHookContexts, createFormHook } from "@tanstack/react-form";
-import { db } from "@/lib/db";
+import { db } from "@/utils/db";
 
 const { formContext, fieldContext } = createFormHookContexts();
 
@@ -87,9 +87,7 @@ export const Component = () => {
   });
 
   const renderListRows = () => {
-    if (!quotes) {
-      return null;
-    }
+    if (!quotes) return null;
 
     return quotes.map((quote) => (
       <ListItem

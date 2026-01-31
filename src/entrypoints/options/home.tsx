@@ -42,8 +42,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Add } from "@mui/icons-material";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
-import { devLog } from "@/lib/utils";
+import { db } from "@/utils/db";
 import { ScrollToTopButton } from "@/components/scroll";
 import { useQueries } from "@tanstack/react-query";
 import { useBackground } from "@/hooks/useBackground";
@@ -99,6 +98,22 @@ const calculateContainerId = (data: unknown) => {
   }
 
   return containerId;
+};
+
+const calcualtePaginationIds = (
+  gallery: number[],
+  sortIds: number[],
+  keys?: IndexableTypeArray,
+) => {
+  if (!Array.isArray(keys)) {
+    return [];
+  }
+
+  const numberKeys = keys.filter((id) => typeof id === "number");
+  const ids = Array.from(new Set(sortIds.concat(numberKeys)));
+  const result = ids.filter((id) => !gallery.includes(id));
+
+  return result;
 };
 
 const StyledImg = styled("img")({
@@ -288,27 +303,6 @@ const SortableWrapper = (props: SortableWrapperProps) => {
   );
 };
 
-const calcualtePaginationIds = (
-  gallery: number[],
-  keys?: IndexableTypeArray,
-) => {
-  if (!Array.isArray(keys)) {
-    return [];
-  }
-
-  const result = keys.filter((id): id is number => {
-    const isNumber = typeof id === "number";
-
-    if (!isNumber) {
-      return false;
-    }
-
-    return !gallery.includes(id);
-  });
-
-  return result;
-};
-
 const databaseIdsInitializer = (): number[] => [];
 
 const GalleryPanel = () => {
@@ -342,8 +336,11 @@ const GalleryPanel = () => {
       .keys();
   }, [pageIndex, pageSize]);
 
-  const paginationIds = calcualtePaginationIds(gallery, paginationKeys);
-  const ids = Array.from(new Set(databaseIds.concat(paginationIds)));
+  const paginationIds = calcualtePaginationIds(
+    gallery,
+    databaseIds,
+    paginationKeys,
+  );
 
   const queries = useQueries({
     queries: Array.from(new Set(paginationIds.concat(gallery)), (id) => {
@@ -435,9 +432,9 @@ const GalleryPanel = () => {
               if (!over) return;
 
               const activeContainer = calculateContainerId(active.data.current);
-              const overContainer = calculateContainerId(over.data.current);
-
               if (!activeContainer) return;
+
+              const overContainer = calculateContainerId(over.data.current);
               if (!overContainer) return;
 
               // Same container, only move element
@@ -460,6 +457,9 @@ const GalleryPanel = () => {
                     (id) => !Object.is(id, active.id),
                   );
                 });
+                setDatabaseIds((prev) =>
+                  prev.filter((id) => !Object.is(id, active.id)),
+                );
 
                 return;
               }
@@ -480,9 +480,9 @@ const GalleryPanel = () => {
               }
 
               if (activeContainer === "database") {
-                const formIndex = ids.indexOf(+active.id);
-                const toIndex = ids.indexOf(+over.id);
-                setDatabaseIds(arrayMove(ids, formIndex, toIndex));
+                const formIndex = paginationIds.indexOf(+active.id);
+                const toIndex = paginationIds.indexOf(+over.id);
+                setDatabaseIds(arrayMove(paginationIds, formIndex, toIndex));
               }
             }}
             onDragCancel={() => {
@@ -507,8 +507,11 @@ const GalleryPanel = () => {
             <Divider>Databse</Divider>
             <DroppableWrapper id="database">
               <ImageGrid>
-                <SortableContext items={ids} strategy={rectSortingStrategy}>
-                  {ids.map((id) => (
+                <SortableContext
+                  items={paginationIds}
+                  strategy={rectSortingStrategy}
+                >
+                  {paginationIds.map((id) => (
                     <SortableWrapper key={id} id={id} containerId={"database"}>
                       <ImageCell id={id} />
                     </SortableWrapper>

@@ -51,10 +51,7 @@ export class ObjectURLStore {
     }
 
     const objectURL = this.#objectURLMap.get(blob);
-
-    if (!objectURL) {
-      return;
-    }
+    if (!objectURL) return;
 
     URL.revokeObjectURL(objectURL);
     this.#objectURLMap.delete(blob);
@@ -75,15 +72,9 @@ export const ObjectURLContext = React.createContext(objectURLStore);
 export const useObjectURL = (blob?: Blob) => {
   const store = React.use(ObjectURLContext);
 
-  if (!store) {
-    throw new Error("No ObjectURLStore instance provided");
-  }
-
   return React.useSyncExternalStore(
     (onStoreChange) => {
-      if (!blob) {
-        return Boolean;
-      }
+      if (!blob) return Boolean;
 
       store.subscribe(blob, onStoreChange);
 
@@ -92,9 +83,7 @@ export const useObjectURL = (blob?: Blob) => {
       };
     },
     () => {
-      if (!blob) {
-        return null;
-      }
+      if (!blob) return null;
 
       return store.getSnapshot(blob);
     },

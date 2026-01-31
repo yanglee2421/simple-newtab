@@ -35,11 +35,9 @@ import {
   useSubscribeSyncStoreChange,
   useSyncStore,
 } from "@/hooks/useSyncStore";
-import { db } from "@/lib/db";
+import { db } from "@/utils/db";
 import type { Preset } from "@/hooks/useSyncStore";
 import snowVillage from "./snowVillage.jpg";
-import { ObjectURLStore } from "@/lib/objectURL";
-import { devLog } from "@/lib/utils";
 
 const particlesInit = initParticlesEngine(async (e) => {
   await loadSnowPreset(e);
@@ -160,14 +158,13 @@ const getDateString = (locales?: Intl.LocalesArgument) => {
   });
 };
 
-const isChineseLocale = () => {
+const calculateIsChinese = () => {
   return /^zh\b/i.test(navigator.language);
 };
 
 const calculateChineseLunar = (date: Date) => {
-  if (!isChineseLocale()) {
-    return "";
-  }
+  const isChinese = calculateIsChinese();
+  if (!isChinese) return "";
 
   const dateFormater = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
     year: "numeric",
@@ -239,9 +236,7 @@ const Quotes = () => {
     return db.quotes.offset(index).limit(1).first();
   }, []);
 
-  if (!quote) {
-    return null;
-  }
+  if (!quote) return null;
 
   return (
     <>
@@ -310,9 +305,7 @@ const objectURLStore = new ObjectURLStore();
 const useObjectURL = (blob?: Blob) => {
   return React.useSyncExternalStore(
     (onStoreChange) => {
-      if (!blob) {
-        return Boolean;
-      }
+      if (!blob) return Boolean;
 
       objectURLStore.subscribe(blob, onStoreChange);
 
@@ -321,9 +314,7 @@ const useObjectURL = (blob?: Blob) => {
       };
     },
     () => {
-      if (!blob) {
-        return "";
-      }
+      if (!blob) return "";
 
       return objectURLStore.getSnapshot(blob);
     },
@@ -338,10 +329,7 @@ const useCurrentBgHref = () => {
   }, [imageId]);
 
   const objectURL = useObjectURL(background?.image);
-
-  if (!objectURL) {
-    return snowVillageHref;
-  }
+  if (!objectURL) return snowVillageHref;
 
   return objectURL;
 };
@@ -499,7 +487,10 @@ export const App = () => {
               <Slider
                 value={alphaVal}
                 onChange={(e, value) => {
-                  if (typeof value !== "number") return e;
+                  if (typeof value !== "number") {
+                    return e;
+                  }
+
                   set((d) => {
                     d.alpha = value;
                   });
@@ -514,7 +505,10 @@ export const App = () => {
               <Slider
                 value={blur}
                 onChange={(e, value) => {
-                  if (typeof value !== "number") return e;
+                  if (typeof value !== "number") {
+                    return e;
+                  }
+
                   set((d) => {
                     d.blur = value;
                   });

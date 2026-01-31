@@ -83,7 +83,9 @@ export const Component = () => {
 
             if (!active) return;
             if (!over) return;
-            if (active.id === over.id) return;
+            if (active.id === over.id) {
+              return;
+            }
 
             setItems((items) => {
               const oldIndex = items.indexOf(+active.id);

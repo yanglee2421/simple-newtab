@@ -11,9 +11,13 @@ import { browser } from "wxt/browser";
 import { SettingsOutlined } from "@mui/icons-material";
 import wxtLogo from "/wxt.svg";
 
-const wxtLogoHref = new URL(wxtLogo, import.meta.url).href;
+const calculateAssetsHref = (path: string) => {
+  return new URL(path, import.meta.url).href;
+};
 
 export const App = () => {
+  const wxtLogoHref = calculateAssetsHref(wxtLogo);
+
   return (
     <Card sx={{ width: 300 }}>
       <CardHeader

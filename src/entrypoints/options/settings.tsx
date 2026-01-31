@@ -72,7 +72,9 @@ export const Component = () => {
                 <Slider
                   value={alpha}
                   onChange={(_, value) => {
-                    if (typeof value !== "number") return;
+                    if (typeof value !== "number") {
+                      return;
+                    }
 
                     setSyncStore((d) => {
                       d.alpha = value;
@@ -88,7 +90,9 @@ export const Component = () => {
                 <Slider
                   value={blur}
                   onChange={(_, value) => {
-                    if (typeof value !== "number") return;
+                    if (typeof value !== "number") {
+                      return;
+                    }
 
                     setSyncStore((d) => {
                       d.blur = value;

@@ -8,5 +8,5 @@ createRoot(document.getElementById("root")!).render(
     <MuiProvider>
       <App />
     </MuiProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

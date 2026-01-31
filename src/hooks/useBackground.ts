@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db } from "@/utils/db";
 import { useQuery } from "@tanstack/react-query";
 
 export const useBackground = (id: number) => {
