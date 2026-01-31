@@ -10,17 +10,12 @@ import {
   RadioGroup,
   Slider,
 } from "@mui/material";
-import {
-  useSyncStore,
-  useSubscribeSyncStoreChange,
-} from "@/hooks/useSyncStore";
 import { ScrollToTopButton } from "@/components/scroll";
 
 export const Component = () => {
   const blur = useSyncStore((s) => s.blur);
   const alpha = useSyncStore((s) => s.alpha);
   const preset = useSyncStore((s) => s.preset);
-  useSubscribeSyncStoreChange();
 
   const setSyncStore = useSyncStore.setState;
 

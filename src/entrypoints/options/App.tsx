@@ -19,6 +19,8 @@ const language = browser.i18n.getUILanguage();
 z.config(Reflect.get(z.locales, calculateLocale(language))?.());
 
 export const App = () => {
+  useSubscribeSyncStoreChange();
+
   return (
     <QueryProvider>
       <MuiProvider>

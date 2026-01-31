@@ -1,72 +1,64 @@
 import React from "react";
 import { create } from "zustand";
-import { browser } from "wxt/browser";
 import { immer } from "zustand/middleware/immer";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 export type Preset = "links" | "snow" | "bubbles" | "";
-export type BackgroundType = "image" | "color" | "gallery";
+export type BackgroundType = "color" | "gallery";
 
 type Store = {
   alpha: number;
   blur: number;
   lang: string;
   preset: Preset;
-  imageId: number;
   backgroundType: BackgroundType;
+  wallpaperId: number;
   gallery: number[];
 };
 
-const syncStorage = {
-  async getItem(key: string) {
-    const val = await browser.storage.sync.get(key);
-    return String(val[key]);
-  },
-  setItem(key: string, value: string) {
-    return browser.storage.sync.set({ [key]: value });
-  },
-  removeItem(key: string) {
-    return browser.storage.sync.remove(key);
-  },
-};
-
-const makeInitialValues = (): Store => {
+const storeInitializer = (): Store => {
   return {
     alpha: 15,
     blur: 4,
     lang: "en",
     preset: "snow" as Preset,
-    imageId: 1,
-    backgroundType: "image",
+    backgroundType: "gallery",
+    wallpaperId: 0,
     gallery: [],
   };
 };
 
 export const useSyncStore = create<Store>()(
-  persist(immer(makeInitialValues), {
+  persist(immer(storeInitializer), {
     name: "useSyncStore",
-    storage: createJSONStorage(() => syncStorage),
-    version: 3,
+    storage: createJSONStorage(() => localStorage),
+    version: 7,
   }),
 );
 
-export const useSyncStoreHasHydrated = () => {
-  return React.useSyncExternalStore(
-    (onStateChange) => useSyncStore.persist.onFinishHydration(onStateChange),
-    () => useSyncStore.persist.hasHydrated(),
-  );
-};
-
 export const useSubscribeSyncStoreChange = () => {
   React.useEffect(() => {
-    const handleSyncStoreChange = () => {
-      useSyncStore.persist.rehydrate();
-    };
+    const controller = new AbortController();
+    let animateId = 0;
 
-    browser.storage.sync.onChanged.addListener(handleSyncStoreChange);
+    window.addEventListener(
+      "storage",
+      (e) => {
+        const storageKey = useSyncStore.persist.getOptions().name;
+
+        if (e.key === storageKey) {
+          cancelAnimationFrame(animateId);
+          animateId = requestAnimationFrame(() => {
+            useSyncStore.persist.rehydrate();
+          });
+        }
+      },
+      controller,
+    );
 
     return () => {
-      browser.storage.sync.onChanged.removeListener(handleSyncStoreChange);
+      controller.abort();
+      cancelAnimationFrame(animateId);
     };
   }, []);
 };

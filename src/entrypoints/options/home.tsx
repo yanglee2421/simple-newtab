@@ -583,7 +583,6 @@ export const Component = () => {
                         switch (value) {
                           case "gallery":
                           case "color":
-                          case "image":
                             draft.backgroundType = value;
                         }
                       });

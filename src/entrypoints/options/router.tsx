@@ -18,21 +18,17 @@ import {
   ImageOutlined,
   LightModeOutlined,
   SettingsOutlined,
-  SlideshowOutlined,
 } from "@mui/icons-material";
-import {
-  CircularProgress,
-  Container,
-  IconButton,
-  useTheme,
-} from "@mui/material";
+import { Container, IconButton, useTheme } from "@mui/material";
 import React from "react";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
+import { FullScreenProgress } from "@/components/FullScreenProgress";
 import type { Navigation } from "@toolpad/core";
 
-const LANGS = new Set(["en", "zh"]);
-const FALLBACK_LANG = "en";
 const calculateLanguage = (langInParams = "", langInStore: string) => {
+  const LANGS = new Set(["en", "zh"]);
+  const FALLBACK_LANG = "en";
+
   if (LANGS.has(langInParams)) {
     return langInParams;
   }
@@ -60,11 +56,6 @@ const langToNavition = (lang: string): Navigation => [
     segment: path(lang, "quotes"),
     title: "Quotes",
     icon: <FormatQuoteOutlined />,
-  },
-  {
-    segment: path(lang, "slides"),
-    title: "Slides",
-    icon: <SlideshowOutlined />,
   },
   {
     segment: path(lang, "settings"),
@@ -154,42 +145,33 @@ const RootRoute = () => {
   );
 };
 
-const RootHydrateFallback = () => {
-  return (
-    <>
-      <CircularProgress />
-    </>
-  );
+const createRoutes = (): RouteObject[] => {
+  return [
+    {
+      id: "root",
+      path: ":lang?",
+      Component: RootRoute,
+      HydrateFallback: FullScreenProgress,
+      loader: async () => {},
+      children: [
+        {
+          index: true,
+          lazy: () => import("./home"),
+        },
+        {
+          path: "quotes",
+          lazy: () => import("./quotes"),
+        },
+        {
+          path: "settings",
+          lazy: () => import("./settings"),
+        },
+      ],
+    },
+  ];
 };
 
-const routes: RouteObject[] = [
-  {
-    id: "root",
-    path: ":lang?",
-    Component: RootRoute,
-    HydrateFallback: RootHydrateFallback,
-    loader: async () => {},
-    children: [
-      {
-        index: true,
-        lazy: () => import("./home"),
-      },
-      {
-        path: "quotes",
-        lazy: () => import("./quotes"),
-      },
-      {
-        path: "slides",
-        lazy: () => import("./slides"),
-      },
-      {
-        path: "settings",
-        lazy: () => import("./settings"),
-      },
-    ],
-  },
-];
-
+const routes = createRoutes();
 const router = createHashRouter(routes);
 
 export const OptionsRouter = () => {
