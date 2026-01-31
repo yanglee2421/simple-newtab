@@ -35,14 +35,108 @@ import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { db } from "@/utils/db";
 import snowVillage from "./snowVillage.jpg";
 
-export const App = () => {
-  useSubscribeSyncStoreChange();
+const calculateBackgroundId = (gallery: number[], wallpaperId: number) => {
+  const isIncludesWallpaperId = gallery.includes(wallpaperId);
+  if (isIncludesWallpaperId) return wallpaperId;
 
-  return (
-    <QueryProvider>
-      <NewTab />
-    </QueryProvider>
-  );
+  if (gallery.length > 0) {
+    return gallery[0];
+  }
+
+  return 0;
+};
+
+const calculateNextIndex = (index: number, length: number) => {
+  const indexPlusOne = index + 1;
+  const minLength = Math.max(length, 1);
+
+  return indexPlusOne % minLength;
+};
+
+const calculateAssetsHref = (path: string) => {
+  return new URL(path, import.meta.url).href;
+};
+
+const calculateMaskColor = (alpha: number) => {
+  return `rgba(0,0,0,${alpha / 100})`;
+};
+
+const calculateIsChinese = () => {
+  return /^zh\b/i.test(navigator.language);
+};
+
+const calculateChineseLunar = (date: Date) => {
+  const isChinese = calculateIsChinese();
+  if (!isChinese) return "";
+
+  const dateFormater = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  return dateFormater.format(date);
+};
+
+const particlesInitializer = () => {
+  return initParticlesEngine(async (e) => {
+    await loadSnowPreset(e);
+    await loadLinksPreset(e);
+    await loadBubblesPreset(e);
+    await loadSlim(e);
+  });
+};
+
+const particlesPromise = particlesInitializer();
+
+const StyledBackgroundImage = styled("div")({
+  position: "fixed",
+  zIndex: 1,
+
+  backgroundSize: "cover",
+  backgroundPosition: "50%",
+});
+
+const StyledBackgroundImageWrapper = styled("div")({
+  position: "relative",
+  zIndex: 0,
+  isolation: "isolate",
+  inset: 0,
+});
+
+const StyledMask = styled("div")({
+  position: "fixed",
+  inset: 0,
+  zIndex: 0,
+});
+
+const ContentContainer = styled("div")({
+  position: "relative",
+  zIndex: 1,
+  inlineSize: "100dvw",
+  blockSize: "100dvh",
+
+  display: "flex",
+  flexDirection: "column",
+});
+
+const ColckWrapper = styled("div")({
+  marginBlockStart: "calc(100dvh/55*21)",
+  transform: "translate3d(0,-50%,0)",
+});
+
+const useBackgroundImage = () => {
+  const wallpaperId = useSyncStore((store) => store.wallpaperId);
+  const gallery = useSyncStore((store) => store.gallery);
+
+  const id = calculateBackgroundId(gallery, wallpaperId);
+
+  const background = useBackground(id);
+
+  const objectURL = useObjectURL(background.data?.file);
+  if (!objectURL) return calculateAssetsHref(snowVillage);
+
+  return objectURL;
 };
 
 const NewTab = () => {
@@ -297,26 +391,9 @@ type ParticleMaskProps = {
 };
 
 const ParticleMask = ({ preset }: ParticleMaskProps) => {
-  React.use(particlesInit);
+  React.use(particlesPromise);
 
   return <Particles options={{ preset, background: { opacity: 0 } }} />;
-};
-
-const calculateIsChinese = () => {
-  return /^zh\b/i.test(navigator.language);
-};
-
-const calculateChineseLunar = (date: Date) => {
-  const isChinese = calculateIsChinese();
-  if (!isChinese) return "";
-
-  const dateFormater = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  return dateFormater.format(date);
 };
 
 const Clock = () => {
@@ -423,89 +500,12 @@ const Quotes = () => {
   );
 };
 
-const ContentContainer = styled("div")({
-  position: "relative",
-  zIndex: 1,
-  inlineSize: "100dvw",
-  blockSize: "100dvh",
+export const App = () => {
+  useSubscribeSyncStoreChange();
 
-  display: "flex",
-  flexDirection: "column",
-});
-
-const ColckWrapper = styled("div")({
-  marginBlockStart: "calc(100dvh/55*21)",
-  transform: "translate3d(0,-50%,0)",
-});
-
-const useBackgroundImage = () => {
-  const wallpaperId = useSyncStore((store) => store.wallpaperId);
-  const gallery = useSyncStore((store) => store.gallery);
-
-  const id = calculateBackgroundId(gallery, wallpaperId);
-
-  const background = useBackground(id);
-
-  const objectURL = useObjectURL(background.data?.file);
-  if (!objectURL) return createAssetsHref(snowVillage);
-
-  return objectURL;
-};
-
-const calculateBackgroundId = (gallery: number[], wallpaperId: number) => {
-  const isIncludesWallpaperId = gallery.includes(wallpaperId);
-  if (isIncludesWallpaperId) return wallpaperId;
-
-  if (gallery.length > 0) {
-    return gallery[0];
-  }
-
-  return 0;
-};
-
-const calculateNextIndex = (index: number, length: number) => {
-  const indexPlusOne = index + 1;
-  const minLength = Math.max(length, 1);
-
-  return indexPlusOne % minLength;
-};
-
-const createAssetsHref = (path: string) => {
-  return new URL(path, import.meta.url).href;
-};
-
-const createPasticlesInitializer = () => {
-  return initParticlesEngine(async (e) => {
-    await loadSnowPreset(e);
-    await loadLinksPreset(e);
-    await loadBubblesPreset(e);
-    await loadSlim(e);
-  });
-};
-
-const particlesInit = createPasticlesInitializer();
-
-const StyledBackgroundImage = styled("div")({
-  position: "fixed",
-  zIndex: 1,
-
-  backgroundSize: "cover",
-  backgroundPosition: "50%",
-});
-
-const StyledBackgroundImageWrapper = styled("div")({
-  position: "relative",
-  zIndex: 0,
-  isolation: "isolate",
-  inset: 0,
-});
-
-const StyledMask = styled("div")({
-  position: "fixed",
-  inset: 0,
-  zIndex: 0,
-});
-
-const calculateMaskColor = (alpha: number) => {
-  return `rgba(0,0,0,${alpha / 100})`;
+  return (
+    <QueryProvider>
+      <NewTab />
+    </QueryProvider>
+  );
 };

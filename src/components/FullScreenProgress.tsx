@@ -1,13 +1,5 @@
 import { CircularProgress, styled } from "@mui/material";
 
-export const FullScreenProgress = () => {
-  return (
-    <ProgressWrapper>
-      <CircularProgress />
-    </ProgressWrapper>
-  );
-};
-
 const ProgressWrapper = styled("div")({
   position: "fixed",
   insetInlineStart: 0,
@@ -19,3 +11,11 @@ const ProgressWrapper = styled("div")({
   justifyContent: "center",
   alignItems: "center",
 });
+
+export const FullScreenProgress = () => {
+  return (
+    <ProgressWrapper>
+      <CircularProgress />
+    </ProgressWrapper>
+  );
+};

@@ -105,21 +105,29 @@ const calculateContainerId = (data: unknown) => {
   return containerId;
 };
 
-const calcualtePaginationIds = (
-  gallery: number[],
-  sortIds: number[],
-  keys?: IndexableTypeArray,
+const calcualteUnactivedBackgroundIds = (
+  activatedIds: number[],
+  unactivatedSortedIds: number[],
+  paginationQueryResult?: IndexableTypeArray,
 ) => {
-  if (!Array.isArray(keys)) {
+  if (!Array.isArray(paginationQueryResult)) {
     return [];
   }
 
-  const numberKeys = keys.filter((id) => typeof id === "number");
-  const ids = Array.from(new Set(sortIds.concat(numberKeys)));
-  const result = ids.filter((id) => !gallery.includes(id));
+  const paginationQueryIds = paginationQueryResult.filter(
+    (id) => typeof id === "number",
+  );
+  const unfilteredIds = Array.from(
+    new Set(unactivatedSortedIds.slice().concat(paginationQueryIds)),
+  );
+  const unactivatedIds = unfilteredIds.filter(
+    (id) => !activatedIds.includes(id),
+  );
 
-  return result;
+  return unactivatedIds;
 };
+
+const databaseIdsInitializer = (): number[] => [];
 
 const StyledImg = styled("img")({
   objectFit: "cover",
@@ -141,6 +149,66 @@ const FullBox = styled("div")({
 
   userSelect: "none",
 });
+
+const ImageGrid = styled("div")(({ theme }) => {
+  return {
+    display: "grid",
+    gap: 4,
+    [theme.breakpoints.up("xs")]: {
+      gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+    },
+    [theme.breakpoints.up("sm")]: {
+      gridTemplateColumns: "repeat(3,minmax(0,1fr))",
+    },
+    [theme.breakpoints.up("md")]: {
+      gridTemplateColumns: "repeat(4,minmax(0,1fr))",
+    },
+    [theme.breakpoints.up("lg")]: {
+      gridTemplateColumns: "repeat(6,minmax(0,1fr))",
+    },
+    [theme.breakpoints.up("xl")]: {
+      gridTemplateColumns: "repeat(8,minmax(0,1fr))",
+    },
+  };
+});
+
+const useBorderBoxSize = <TEl extends Element>() => {
+  const [inlineSize, setInlineSize] = React.useState(0);
+  const [blockSize, setBlockSize] = React.useState(0);
+
+  const animationIdRef = React.useRef(0);
+  const ref = React.useRef<TEl>(null);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(
+      ([
+        {
+          borderBoxSize: [{ inlineSize, blockSize }],
+        },
+      ]) => {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = requestAnimationFrame(() => {
+          React.startTransition(() => {
+            setInlineSize(Math.floor(inlineSize));
+            setBlockSize(Math.floor(blockSize));
+          });
+        });
+      },
+    );
+
+    observer.observe(el);
+
+    return () => {
+      observer.unobserve(el);
+      observer.disconnect();
+    };
+  }, []);
+
+  return [ref, inlineSize, blockSize] as const;
+};
 
 type ImageCellProps = {
   id: number;
@@ -200,28 +268,6 @@ const ColorPanel = () => {
     </Card>
   );
 };
-
-const ImageGrid = styled("div")(({ theme }) => {
-  return {
-    display: "grid",
-    gap: 4,
-    [theme.breakpoints.up("xs")]: {
-      gridTemplateColumns: "repeat(2,minmax(0,1fr))",
-    },
-    [theme.breakpoints.up("sm")]: {
-      gridTemplateColumns: "repeat(3,minmax(0,1fr))",
-    },
-    [theme.breakpoints.up("md")]: {
-      gridTemplateColumns: "repeat(4,minmax(0,1fr))",
-    },
-    [theme.breakpoints.up("lg")]: {
-      gridTemplateColumns: "repeat(6,minmax(0,1fr))",
-    },
-    [theme.breakpoints.up("xl")]: {
-      gridTemplateColumns: "repeat(8,minmax(0,1fr))",
-    },
-  };
-});
 
 type DroppableWrapperProps = {
   id: UniqueIdentifier;
@@ -308,8 +354,6 @@ const SortableWrapper = (props: SortableWrapperProps) => {
   );
 };
 
-const databaseIdsInitializer = (): number[] => [];
-
 const GalleryPanel = () => {
   const [pageIndex, setPageIndex] = React.useState(0);
   const [pageSize] = React.useState(24);
@@ -341,14 +385,14 @@ const GalleryPanel = () => {
       .keys();
   }, [pageIndex, pageSize]);
 
-  const paginationIds = calcualtePaginationIds(
+  const unactivedIds = calcualteUnactivedBackgroundIds(
     gallery,
     databaseIds,
     paginationKeys,
   );
 
   const queries = useQueries({
-    queries: Array.from(new Set(paginationIds.concat(gallery)), (id) => {
+    queries: Array.from(new Set(unactivedIds.concat(gallery)), (id) => {
       return {
         queryKey: ["database", "backgrounds", id],
         queryFn: async () => {
@@ -495,9 +539,9 @@ const GalleryPanel = () => {
               }
 
               if (activeContainer === "database") {
-                const formIndex = paginationIds.indexOf(+active.id);
-                const toIndex = paginationIds.indexOf(+over.id);
-                const sortResult = arrayMove(paginationIds, formIndex, toIndex);
+                const formIndex = unactivedIds.indexOf(+active.id);
+                const toIndex = unactivedIds.indexOf(+over.id);
+                const sortResult = arrayMove(unactivedIds, formIndex, toIndex);
 
                 setDatabaseIds(sortResult);
               }
@@ -525,10 +569,10 @@ const GalleryPanel = () => {
             <DroppableWrapper id="database">
               <ImageGrid>
                 <SortableContext
-                  items={paginationIds}
+                  items={unactivedIds}
                   strategy={rectSortingStrategy}
                 >
-                  {paginationIds.map((id) => (
+                  {unactivedIds.map((id) => (
                     <SortableWrapper key={id} id={id} containerId={"database"}>
                       <ImageCell id={id} />
                     </SortableWrapper>
@@ -625,42 +669,4 @@ export const Component = () => {
       </Stack>
     </>
   );
-};
-
-const useBorderBoxSize = <TEl extends Element>() => {
-  const [inlineSize, setInlineSize] = React.useState(0);
-  const [blockSize, setBlockSize] = React.useState(0);
-
-  const animationIdRef = React.useRef(0);
-  const ref = React.useRef<TEl>(null);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new ResizeObserver(
-      ([
-        {
-          borderBoxSize: [{ inlineSize, blockSize }],
-        },
-      ]) => {
-        cancelAnimationFrame(animationIdRef.current);
-        animationIdRef.current = requestAnimationFrame(() => {
-          React.startTransition(() => {
-            setInlineSize(Math.floor(inlineSize));
-            setBlockSize(Math.floor(blockSize));
-          });
-        });
-      },
-    );
-
-    observer.observe(el);
-
-    return () => {
-      observer.unobserve(el);
-      observer.disconnect();
-    };
-  }, []);
-
-  return [ref, inlineSize, blockSize] as const;
 };

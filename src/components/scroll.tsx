@@ -34,7 +34,7 @@ type ScrollToTopProps = {
   show: boolean;
 };
 
-export const ScrollToTop = (props: ScrollToTopProps) => {
+const ScrollToTop = (props: ScrollToTopProps) => {
   return (
     <Zoom in={props.show} unmountOnExit>
       <Fab
@@ -53,8 +53,6 @@ export const ScrollToTop = (props: ScrollToTopProps) => {
     </Zoom>
   );
 };
-
-ScrollToTop.useScrollToTop = useScrollToTop;
 
 export const ScrollToTopButton = () => {
   const [ref, show] = useScrollToTop();

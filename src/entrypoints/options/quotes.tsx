@@ -30,6 +30,10 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { createFormHookContexts, createFormHook } from "@tanstack/react-form";
 import { db } from "@/utils/db";
 
+const calculatePageCount = (count: number, pageSize: number) => {
+  return Math.ceil(count / pageSize);
+};
+
 const { formContext, fieldContext } = createFormHookContexts();
 
 const { useAppForm } = createFormHook({
@@ -47,10 +51,6 @@ const schema = z.object({
   content: z.string().min(1),
   anthor: z.string(),
 });
-
-const calculatePageCount = (count: number, pageSize: number) => {
-  return Math.ceil(count / pageSize);
-};
 
 export const Component = () => {
   const [pageIndex, setPageIndex] = React.useState(0);
