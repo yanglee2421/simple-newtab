@@ -24,11 +24,11 @@ export const Component = () => {
       <ScrollToTopButton />
       <Box sx={{ padding: 3 }}>
         <Card>
-          <CardHeader title="Particles Preset" />
+          <CardHeader title="设置" />
           <CardContent>
             <Grid container spacing={3}>
               <Grid size={12}>
-                <FormLabel>Particles Preset</FormLabel>
+                <FormLabel>粒子特效</FormLabel>
                 <RadioGroup
                   value={preset}
                   onChange={(_, value) => {

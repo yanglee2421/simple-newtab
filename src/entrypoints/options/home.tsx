@@ -23,6 +23,7 @@ import {
   MeasuringStrategy,
   MouseSensor,
   PointerSensor,
+  pointerWithin,
   TouchSensor,
   UniqueIdentifier,
   useDroppable,
@@ -40,7 +41,11 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { CSS } from "@dnd-kit/utilities";
 import { Add } from "@mui/icons-material";
-import { snapCenterToCursor } from "@dnd-kit/modifiers";
+import {
+  restrictToFirstScrollableAncestor,
+  restrictToWindowEdges,
+  snapCenterToCursor,
+} from "@dnd-kit/modifiers";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/utils/db";
 import { ScrollToTopButton } from "@/components/scroll";
@@ -417,7 +422,12 @@ const GalleryPanel = () => {
         <Stack spacing={0}>
           <DndContext
             sensors={sensors}
-            modifiers={[snapCenterToCursor]}
+            modifiers={[
+              snapCenterToCursor,
+              restrictToFirstScrollableAncestor,
+              restrictToWindowEdges,
+            ]}
+            collisionDetection={pointerWithin}
             measuring={{
               droppable: {
                 strategy: MeasuringStrategy.Always,

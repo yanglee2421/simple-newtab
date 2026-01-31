@@ -34,7 +34,6 @@ import { loadBubblesPreset } from "@tsparticles/preset-bubbles";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { db } from "@/utils/db";
 import snowVillage from "./snowVillage.jpg";
-import { FullScreenProgress } from "@/components/FullScreenProgress";
 
 export const App = () => {
   useSubscribeSyncStoreChange();
@@ -52,10 +51,13 @@ const NewTab = () => {
   const [mouseX, setMouseX] = React.useState(0);
   const [mouseY, setMouseY] = React.useState(0);
 
-  const alphaVal = useSyncStore((s) => s.alpha);
+  const maskRef = React.useRef<HTMLDivElement>(null);
+
+  const alpha = useSyncStore((s) => s.alpha);
   const blur = useSyncStore((s) => s.blur);
   const preset = useSyncStore((s) => s.preset);
   const gallery = useSyncStore((store) => store.gallery);
+  const backgroundImage = useBackgroundImage();
 
   const set = useSyncStore.setState;
 
@@ -65,16 +67,41 @@ const NewTab = () => {
     setMouseY(0);
   };
 
-  const handleNextWallpare = () => {
+  const handleNextWallpare = async () => {
     handleContextMenuClose();
+
+    const el = maskRef.current;
+    const duration = 250;
+
+    const animationOne = await el?.animate(
+      [
+        { backgroundColor: calculateMaskColor(alpha) },
+        { backgroundColor: calculateMaskColor(100) },
+      ],
+      { duration },
+    ).finished;
+
+    animationOne?.commitStyles?.();
+
     set((draft) => {
-      const index = draft.gallery.indexOf(draft.wallpaperId);
-      const length = draft.gallery.length || 1;
-      const nextIndex = (index + 1) % length;
+      const currentId = calculateBackgroundId(draft.gallery, draft.wallpaperId);
+      const index = draft.gallery.indexOf(currentId);
+      const length = draft.gallery.length;
+      const nextIndex = calculateNextIndex(index, length);
       const nextId = draft.gallery.at(nextIndex) || 0;
 
       draft.wallpaperId = nextId;
     });
+
+    const animationTwo = await el?.animate(
+      [
+        { backgroundColor: calculateMaskColor(100) },
+        { backgroundColor: calculateMaskColor(alpha) },
+      ],
+      { duration },
+    ).finished;
+
+    animationTwo?.commitStyles?.();
   };
 
   const handleSettingsClick = () => {
@@ -83,9 +110,15 @@ const NewTab = () => {
   };
 
   return (
-    <React.Suspense fallback={<FullScreenProgress />}>
-      <Background />
-      <ContentWrapper
+    <>
+      <Background
+        alpha={alpha}
+        blur={blur}
+        backgroundImage={backgroundImage}
+        preset={preset}
+        ref={maskRef}
+      />
+      <ContentContainer
         onContextMenu={(e) => {
           e.preventDefault();
           setShowContentMenu((previous) => !previous);
@@ -93,7 +126,10 @@ const NewTab = () => {
           setMouseY(e.clientY);
         }}
       >
-        <Content />
+        <ColckWrapper>
+          <Clock />
+        </ColckWrapper>
+        <Quotes />
         <Menu
           open={showContextMenu}
           onClose={handleContextMenuClose}
@@ -118,7 +154,7 @@ const NewTab = () => {
             </MenuItem>
           )}
         </Menu>
-      </ContentWrapper>
+      </ContentContainer>
       <Drawer open={show} onClose={() => setShow(false)} anchor="bottom">
         <CardHeader
           title="Settings"
@@ -179,7 +215,7 @@ const NewTab = () => {
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <FormLabel>Alpha</FormLabel>
               <Slider
-                value={alphaVal}
+                value={alpha}
                 onChange={(e, value) => {
                   if (typeof value !== "number") {
                     return e;
@@ -215,134 +251,55 @@ const NewTab = () => {
           </Grid>
         </CardContent>
       </Drawer>
-    </React.Suspense>
-  );
-};
-
-const ContentWrapper = styled("div")({});
-
-const createAssetsHref = (path: string) => {
-  return new URL(path, import.meta.url).href;
-};
-
-const createPasticlesInitializer = () => {
-  return initParticlesEngine(async (e) => {
-    await loadSnowPreset(e);
-    await loadLinksPreset(e);
-    await loadBubblesPreset(e);
-    await loadSlim(e);
-  });
-};
-
-const StyledBackgroundImage = styled("div")({
-  position: "fixed",
-  zIndex: 1,
-
-  backgroundSize: "cover",
-  backgroundPosition: "50%",
-});
-
-const StyledBackgroundImageWrapper = styled("div")({
-  position: "relative",
-  zIndex: 0,
-  isolation: "isolate",
-});
-
-const Particle = () => {
-  const preset = useSyncStore((store) => store.preset);
-
-  return <Particles options={{ preset, background: { opacity: 0 } }} />;
-};
-
-const BackgroundImage = () => {
-  const blur = useSyncStore((store) => store.blur);
-  const backgroundImage = useCurrentBgHref();
-
-  const blurValue = blur / 5;
-
-  return (
-    <StyledBackgroundImageWrapper>
-      <StyledBackgroundImage
-        style={{
-          inset: -2 * blurValue,
-          filter: `blur(${blurValue}px)`,
-          backgroundImage: `url(${backgroundImage})`,
-        }}
-      />
-    </StyledBackgroundImageWrapper>
-  );
-};
-
-const Background = () => {
-  React.use(particlesInit);
-
-  return (
-    <>
-      <BackgroundImage />
-      <Mask />
-      <Particle />
     </>
   );
 };
 
-const Mask = () => {
-  const alpha = useSyncStore((store) => store.alpha);
+type BackgroundProps = {
+  preset: string;
+  alpha: number;
+  blur: number;
+  backgroundImage: string;
+  ref: React.Ref<HTMLDivElement>;
+};
+
+const Background = (props: BackgroundProps) => {
+  const { preset, alpha, blur, backgroundImage, ref } = props;
+
+  const blurValue = blur / 5;
 
   return (
-    <Box
-      sx={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 0,
-        backgroundColor: `rgba(0,0,0,${alpha / 100})`,
-      }}
-    />
+    <>
+      <StyledBackgroundImageWrapper>
+        <StyledBackgroundImage
+          style={{
+            inset: -2 * blurValue,
+            filter: `blur(${blurValue}px)`,
+            backgroundImage: `url(${backgroundImage})`,
+          }}
+        />
+      </StyledBackgroundImageWrapper>
+      <StyledMask
+        ref={ref}
+        style={{
+          backgroundColor: calculateMaskColor(alpha),
+        }}
+      />
+      <React.Suspense>
+        <ParticleMask preset={preset} />
+      </React.Suspense>
+    </>
   );
 };
 
-const particlesInit = createPasticlesInitializer();
-
-const onAnimationFrame = (cb: () => void) => {
-  let animate = 0;
-
-  const run = () => {
-    animate = requestAnimationFrame(run);
-    cb();
-  };
-
-  run();
-
-  return () => cancelAnimationFrame(animate);
+type ParticleMaskProps = {
+  preset: string;
 };
 
-const useLocaleTime = (locales?: Intl.LocalesArgument) => {
-  return React.useSyncExternalStore(onAnimationFrame, () =>
-    getTimeString(locales),
-  );
-};
+const ParticleMask = ({ preset }: ParticleMaskProps) => {
+  React.use(particlesInit);
 
-const getTimeString = (locales?: Intl.LocalesArgument) => {
-  return new Date().toLocaleTimeString(locales, {
-    timeStyle: "short",
-    hour12: false,
-  });
-};
-
-const useLocaleDate = (locales?: Intl.LocalesArgument) => {
-  return React.useSyncExternalStore(
-    onAnimationFrame,
-    () => getDateString(locales),
-    () => getDateString(locales),
-  );
-};
-
-const getDateString = (locales?: Intl.LocalesArgument) => {
-  return new Date().toLocaleDateString(locales, {
-    weekday: "short",
-    year: "numeric",
-    month: "2-digit",
-    day: "numeric",
-  });
+  return <Particles options={{ preset, background: { opacity: 0 } }} />;
 };
 
 const calculateIsChinese = () => {
@@ -363,14 +320,14 @@ const calculateChineseLunar = (date: Date) => {
 };
 
 const Clock = () => {
-  const time = useLocaleTime();
-  const date = useLocaleDate();
+  const time = useTimeString();
+  const date = useDateString();
   const theme = useTheme();
 
   const lunar = calculateChineseLunar(new Date());
 
   return (
-    <Box>
+    <>
       <Typography
         component={"time"}
         variant="h1"
@@ -415,7 +372,7 @@ const Clock = () => {
           {lunar}
         </Typography>
       </React.Activity>
-    </Box>
+    </>
   );
 };
 
@@ -444,6 +401,7 @@ const Quotes = () => {
           sx={{
             color: (theme) => alpha(theme.palette.common.white, 1),
             lineHeight: "20px",
+            userSelect: "none",
           }}
           variant="overline"
         >
@@ -454,6 +412,7 @@ const Quotes = () => {
             lineHeight: "20px",
             color: (theme) => alpha(theme.palette.common.white, 1),
             opacity: quote.anthor ? 1 : 0,
+            userSelect: "none",
           }}
           variant="overline"
         >
@@ -461,17 +420,6 @@ const Quotes = () => {
         </Typography>
       </Box>
     </>
-  );
-};
-
-const Content = () => {
-  return (
-    <ContentContainer>
-      <ColckWrapper>
-        <Clock />
-      </ColckWrapper>
-      <Quotes />
-    </ContentContainer>
   );
 };
 
@@ -490,7 +438,7 @@ const ColckWrapper = styled("div")({
   transform: "translate3d(0,-50%,0)",
 });
 
-const useCurrentBgHref = () => {
+const useBackgroundImage = () => {
   const wallpaperId = useSyncStore((store) => store.wallpaperId);
   const gallery = useSyncStore((store) => store.gallery);
 
@@ -513,4 +461,51 @@ const calculateBackgroundId = (gallery: number[], wallpaperId: number) => {
   }
 
   return 0;
+};
+
+const calculateNextIndex = (index: number, length: number) => {
+  const indexPlusOne = index + 1;
+  const minLength = Math.max(length, 1);
+
+  return indexPlusOne % minLength;
+};
+
+const createAssetsHref = (path: string) => {
+  return new URL(path, import.meta.url).href;
+};
+
+const createPasticlesInitializer = () => {
+  return initParticlesEngine(async (e) => {
+    await loadSnowPreset(e);
+    await loadLinksPreset(e);
+    await loadBubblesPreset(e);
+    await loadSlim(e);
+  });
+};
+
+const particlesInit = createPasticlesInitializer();
+
+const StyledBackgroundImage = styled("div")({
+  position: "fixed",
+  zIndex: 1,
+
+  backgroundSize: "cover",
+  backgroundPosition: "50%",
+});
+
+const StyledBackgroundImageWrapper = styled("div")({
+  position: "relative",
+  zIndex: 0,
+  isolation: "isolate",
+  inset: 0,
+});
+
+const StyledMask = styled("div")({
+  position: "fixed",
+  inset: 0,
+  zIndex: 0,
+});
+
+const calculateMaskColor = (alpha: number) => {
+  return `rgba(0,0,0,${alpha / 100})`;
 };

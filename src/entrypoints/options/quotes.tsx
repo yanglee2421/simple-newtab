@@ -1,5 +1,4 @@
 import {
-  Box,
   Button,
   Card,
   CardActions,
@@ -17,13 +16,13 @@ import {
   TextField,
 } from "@mui/material";
 import {
-  AddOutlined,
-  DeleteOutlined,
-  FormatQuoteOutlined,
-  HistoryEduOutlined,
-  KeyboardReturnOutlined,
-  RestoreOutlined,
-  SaveOutlined,
+  Add,
+  Delete,
+  FormatQuote,
+  HistoryEdu,
+  KeyboardReturn,
+  Restore,
+  Save,
 } from "@mui/icons-material";
 import { z } from "zod";
 import React from "react";
@@ -97,14 +96,13 @@ export const Component = () => {
             onClick={() => {
               db.quotes.delete(quote.id);
             }}
-            color="error"
           >
-            <DeleteOutlined />
+            <Delete />
           </IconButton>
         }
       >
         <ListItemIcon>
-          <FormatQuoteOutlined />
+          <FormatQuote />
         </ListItemIcon>
         <ListItemText primary={quote.content} secondary={quote.anthor} />
       </ListItem>
@@ -114,7 +112,7 @@ export const Component = () => {
   return (
     <Stack spacing={3} sx={{ paddingBlock: 3 }}>
       <Card>
-        <CardHeader title="Quotes" action={<AddOutlined />} />
+        <CardHeader title="Quotes" subheader="新增句子" action={<Add />} />
         <CardContent>
           <form
             onSubmit={async (e) => {
@@ -148,13 +146,13 @@ export const Component = () => {
                                 form={formId}
                                 tabIndex={5}
                               >
-                                <KeyboardReturnOutlined />
+                                <KeyboardReturn />
                               </IconButton>
                             </InputAdornment>
                           ),
                           startAdornment: (
                             <InputAdornment position="start">
-                              <FormatQuoteOutlined />
+                              <FormatQuote />
                             </InputAdornment>
                           ),
                           slotProps: {
@@ -189,13 +187,13 @@ export const Component = () => {
                                 form={formId}
                                 tabIndex={6}
                               >
-                                <KeyboardReturnOutlined />
+                                <KeyboardReturn />
                               </IconButton>
                             </InputAdornment>
                           ),
                           startAdornment: (
                             <InputAdornment position="start">
-                              <HistoryEduOutlined />
+                              <HistoryEdu />
                             </InputAdornment>
                           ),
                           slotProps: {
@@ -213,37 +211,31 @@ export const Component = () => {
           </form>
         </CardContent>
         <CardActions>
-          <Button
-            type="submit"
-            form={formId}
-            tabIndex={3}
-            startIcon={<SaveOutlined />}
-          >
+          <Button type="submit" form={formId} tabIndex={3} startIcon={<Save />}>
             Submit
           </Button>
           <Button
             type="reset"
             form={formId}
             tabIndex={4}
-            startIcon={<RestoreOutlined />}
+            startIcon={<Restore />}
           >
             Reset
           </Button>
         </CardActions>
       </Card>
       <Card>
-        <CardContent>
-          <Box>
-            <Pagination
-              page={pageIndex + 1}
-              count={calculatePageCount(count || 0, pageSize)}
-              onChange={(_, page) => {
-                setPageIndex(page - 1);
-              }}
-            />
-          </Box>
-        </CardContent>
+        <CardHeader title="已存储的" subheader="以下是已存入的句子" />
         <List disablePadding>{renderListRows()}</List>
+        <CardActions>
+          <Pagination
+            page={pageIndex + 1}
+            count={calculatePageCount(count || 0, pageSize)}
+            onChange={(_, page) => {
+              setPageIndex(page - 1);
+            }}
+          />
+        </CardActions>
       </Card>
     </Stack>
   );
