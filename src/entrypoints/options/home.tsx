@@ -128,6 +128,7 @@ const calculateContainerId = (data: unknown) => {
 
 const calcualteUnactivedBackgroundIds = (
   activatedIds: number[],
+  trashedIds: number[],
   unactivatedSortedIds: number[],
   paginationQueryResult?: IndexableTypeArray,
 ) => {
@@ -142,7 +143,7 @@ const calcualteUnactivedBackgroundIds = (
     new Set(unactivatedSortedIds.slice().concat(paginationQueryIds)),
   );
   const unactivatedIds = unfilteredIds.filter(
-    (id) => !activatedIds.includes(id),
+    (id) => ![...activatedIds, ...trashedIds].includes(id),
   );
 
   return unactivatedIds;
@@ -162,8 +163,14 @@ const arrayRemove = (array: number[], id: number) => {
   return array.filter((el) => !Object.is(el, id));
 };
 
+const arrayAdd = (array: number[], id: number) => {
+  return Array.from(new Set([...array, id]));
+};
+
 const animateLayoutChanges: AnimateLayoutChanges = (args) => {
-  return defaultAnimateLayoutChanges({ ...args, wasDragging: true });
+  const result = defaultAnimateLayoutChanges({ ...args, wasDragging: true });
+
+  return result;
 };
 
 const StyledImg = styled("img")({
@@ -497,6 +504,7 @@ const GalleryPanel = () => {
   const [width, setWidth] = React.useState(0);
   const [databaseIds, setDatabaseIds] = React.useState(databaseIdsInitializer);
   const [enableDropAnimation, setEnableDropAnimation] = React.useState(true);
+  const [trashedIds, setTrashedIds] = React.useState(databaseIdsInitializer);
 
   const debounceRef = React.useRef(0);
 
@@ -530,13 +538,12 @@ const GalleryPanel = () => {
 
   const [oPaginationKeys, oPaginationKeysAction] = React.useOptimistic(
     paginationIds,
-    (previous, id: number) => {
-      return arrayRemove(previous, id);
-    },
+    arrayRemove,
   );
 
   const unactivedIds = calcualteUnactivedBackgroundIds(
     gallery,
+    trashedIds,
     databaseIds,
     oPaginationKeys,
   );
@@ -580,6 +587,7 @@ const GalleryPanel = () => {
           draft.gallery = arrayRemove(draft.gallery, id);
         });
         setDatabaseIds((previous) => arrayRemove(previous, id));
+        setTrashedIds((previous) => arrayAdd(previous, id));
         await db.backgrounds.delete(id);
       });
     });
@@ -646,10 +654,12 @@ const GalleryPanel = () => {
             onDragStart={({ active }) => {
               setActiveId(active.id);
               setWidth(calculateActiveWidth(active.data.current));
+              setEnableDropAnimation(true);
             }}
             onDragOver={({ active, over }) => {
               if (!over) return;
 
+              const activeId = +active.id;
               const activeContainer = calculateContainerId(active.data.current);
               if (!activeContainer) return;
 
@@ -671,7 +681,7 @@ const GalleryPanel = () => {
               if (overContainer === "gallery") {
                 React.startTransition(() => {
                   useSyncStore.setState((draft) => {
-                    draft.gallery = [...draft.gallery, +active.id];
+                    draft.gallery = arrayAdd(draft.gallery, activeId);
                   });
                 });
 
@@ -681,13 +691,9 @@ const GalleryPanel = () => {
               if (overContainer === "database") {
                 React.startTransition(() => {
                   useSyncStore.setState((draft) => {
-                    draft.gallery = draft.gallery.filter(
-                      (id) => !Object.is(id, active.id),
-                    );
+                    draft.gallery = arrayRemove(draft.gallery, activeId);
                   });
-                  setDatabaseIds((prev) =>
-                    prev.filter((id) => !Object.is(id, active.id)),
-                  );
+                  setDatabaseIds((prev) => arrayRemove(prev, activeId));
                 });
 
                 return;
