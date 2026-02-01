@@ -24,7 +24,9 @@ export const useResizeObserver = <TEl extends Element>() => {
       cancelAnimationFrame(animationId);
       animationId = requestAnimationFrame(() => {
         const entry = entries.at(0) || null;
-        setEntry(entry);
+        React.startTransition(() => {
+          setEntry(entry);
+        });
       });
     });
     observer.observe(el);

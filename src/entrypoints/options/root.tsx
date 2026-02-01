@@ -10,14 +10,9 @@ import {
   DialogsProvider,
   DashboardLayout,
 } from "@toolpad/core";
-import {
-  FormatQuoteOutlined,
-  ImageOutlined,
-  LightModeOutlined,
-  SettingsOutlined,
-} from "@mui/icons-material";
-import { Container, IconButton, useTheme } from "@mui/material";
 import React from "react";
+import { Container, useTheme } from "@mui/material";
+import { Image, FormatQuote } from "@mui/icons-material";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
 import type { Navigation } from "@toolpad/core";
 
@@ -46,17 +41,12 @@ const createNavition = (lang: string): Navigation => [
   {
     segment: calculatePath(lang),
     title: "Background",
-    icon: <ImageOutlined />,
+    icon: <Image />,
   },
   {
     segment: calculatePath(lang, "quotes"),
     title: "Quotes",
-    icon: <FormatQuoteOutlined />,
-  },
-  {
-    segment: calculatePath(lang, "settings"),
-    title: "Settings",
-    icon: <SettingsOutlined />,
+    icon: <FormatQuote />,
   },
 ];
 
@@ -71,11 +61,7 @@ const useNavigation = () => {
 };
 
 const DashboardToolbar = () => {
-  return (
-    <IconButton>
-      <LightModeOutlined />
-    </IconButton>
-  );
+  return <ModeToggle />;
 };
 
 export const RootRoute = () => {

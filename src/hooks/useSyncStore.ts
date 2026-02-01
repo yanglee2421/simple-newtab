@@ -5,6 +5,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 export type Preset = "links" | "snow" | "bubbles" | "";
 export type BackgroundType = "color" | "gallery";
+export type Mode = "system" | "light" | "dark";
 
 type Store = {
   alpha: number;
@@ -14,6 +15,7 @@ type Store = {
   backgroundType: BackgroundType;
   wallpaperId: number;
   gallery: number[];
+  mode: Mode;
 };
 
 const storeInitializer = (): Store => {
@@ -25,6 +27,7 @@ const storeInitializer = (): Store => {
     backgroundType: "gallery",
     wallpaperId: 0,
     gallery: [],
+    mode: "system",
   };
 };
 
@@ -32,7 +35,7 @@ export const useSyncStore = create<Store>()(
   persist(immer(storeInitializer), {
     name: "useSyncStore",
     storage: createJSONStorage(() => localStorage),
-    version: 7,
+    version: 8,
   }),
 );
 
@@ -49,7 +52,9 @@ export const useSubscribeSyncStoreChange = () => {
         if (e.key === storageKey) {
           cancelAnimationFrame(animateId);
           animateId = requestAnimationFrame(() => {
-            useSyncStore.persist.rehydrate();
+            React.startTransition(() => {
+              useSyncStore.persist.rehydrate();
+            });
           });
         }
       },

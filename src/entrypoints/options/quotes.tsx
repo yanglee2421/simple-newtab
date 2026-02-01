@@ -162,6 +162,7 @@ export const Component = () => {
                           },
                         },
                       }}
+                      label="语录"
                     />
                   )}
                 </form.AppField>
@@ -203,6 +204,7 @@ export const Component = () => {
                           },
                         },
                       }}
+                      label="作者"
                     />
                   )}
                 </form.AppField>

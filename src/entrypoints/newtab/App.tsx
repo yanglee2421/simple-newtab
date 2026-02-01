@@ -1,16 +1,6 @@
 import {
   alpha,
   Box,
-  CardContent,
-  CardHeader,
-  Drawer,
-  FormControlLabel,
-  FormLabel,
-  Grid,
-  IconButton,
-  Radio,
-  RadioGroup,
-  Slider,
   Typography,
   useTheme,
   styled,
@@ -19,12 +9,7 @@ import {
   ListItemIcon,
   ListItemText,
 } from "@mui/material";
-import {
-  CloseOutlined,
-  RestoreOutlined,
-  Settings,
-  Wallpaper,
-} from "@mui/icons-material";
+import { Settings, Wallpaper } from "@mui/icons-material";
 import React from "react";
 import { loadSlim } from "@tsparticles/slim";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -32,6 +17,7 @@ import { loadSnowPreset } from "@tsparticles/preset-snow";
 import { loadLinksPreset } from "@tsparticles/preset-links";
 import { loadBubblesPreset } from "@tsparticles/preset-bubbles";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
+import { browser } from "wxt/browser";
 import { db } from "@/utils/db";
 import snowVillage from "./snowVillage.jpg";
 
@@ -140,7 +126,6 @@ const useBackgroundImage = () => {
 };
 
 const NewTab = () => {
-  const [show, setShow] = React.useState(false);
   const [showContextMenu, setShowContentMenu] = React.useState(false);
   const [mouseX, setMouseX] = React.useState(0);
   const [mouseY, setMouseY] = React.useState(0);
@@ -198,9 +183,9 @@ const NewTab = () => {
     animationTwo?.commitStyles?.();
   };
 
-  const handleSettingsClick = () => {
+  const handleSettingsClick = async () => {
     handleContextMenuClose();
-    setShow(true);
+    await browser.runtime.openOptionsPage();
   };
 
   return (
@@ -249,102 +234,6 @@ const NewTab = () => {
           )}
         </Menu>
       </ContentContainer>
-      <Drawer open={show} onClose={() => setShow(false)} anchor="bottom">
-        <CardHeader
-          title="Settings"
-          action={
-            <>
-              <IconButton
-                onClick={() => {
-                  set(useSyncStore.getInitialState());
-                }}
-              >
-                <RestoreOutlined />
-              </IconButton>
-              <IconButton
-                onClick={() => {
-                  setShow(false);
-                }}
-              >
-                <CloseOutlined color="error" />
-              </IconButton>
-            </>
-          }
-        />
-        <CardContent>
-          <Grid container spacing={6}>
-            <Grid size={12}>
-              <FormLabel>Particles Preset</FormLabel>
-              <RadioGroup
-                value={preset}
-                onChange={(e, value) => {
-                  void e;
-                  switch (value) {
-                    case "snow":
-                    case "links":
-                    case "bubbles":
-                    case "":
-                      set((d) => {
-                        d.preset = value;
-                      });
-                  }
-                }}
-                row
-              >
-                <FormControlLabel
-                  control={<Radio value="snow" />}
-                  label="Snow"
-                />
-                <FormControlLabel
-                  control={<Radio value={"links"} />}
-                  label="Links"
-                />
-                <FormControlLabel
-                  control={<Radio value={"bubbles"} />}
-                  label="Bubbles"
-                />
-                <FormControlLabel control={<Radio value={""} />} label="None" />
-              </RadioGroup>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <FormLabel>Alpha</FormLabel>
-              <Slider
-                value={alpha}
-                onChange={(e, value) => {
-                  if (typeof value !== "number") {
-                    return e;
-                  }
-
-                  set((d) => {
-                    d.alpha = value;
-                  });
-                }}
-                max={100}
-                min={0}
-                valueLabelDisplay="auto"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <FormLabel>Blur</FormLabel>
-              <Slider
-                value={blur}
-                onChange={(e, value) => {
-                  if (typeof value !== "number") {
-                    return e;
-                  }
-
-                  set((d) => {
-                    d.blur = value;
-                  });
-                }}
-                max={100}
-                min={0}
-                valueLabelDisplay="auto"
-              />
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Drawer>
     </>
   );
 };

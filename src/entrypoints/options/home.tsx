@@ -1,10 +1,10 @@
 import {
-  Box,
   Card,
   CardActions,
   CardContent,
   CardHeader,
   Divider,
+  FormLabel,
   Grid,
   IconButton,
   List,
@@ -12,11 +12,19 @@ import {
   ListItemText,
   MenuItem,
   Pagination,
+  Slider,
   Stack,
   styled,
   TextField,
+  ToggleButton,
+  toggleButtonClasses,
+  ToggleButtonGroup,
+  toggleButtonGroupClasses,
+  Typography,
+  useTheme,
 } from "@mui/material";
 import {
+  CollisionDetection,
   DndContext,
   DragOverlay,
   KeyboardSensor,
@@ -24,6 +32,7 @@ import {
   MouseSensor,
   PointerSensor,
   pointerWithin,
+  rectIntersection,
   TouchSensor,
   UniqueIdentifier,
   useDroppable,
@@ -31,26 +40,32 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import {
+  arrayMove,
   useSortable,
   SortableContext,
-  sortableKeyboardCoordinates,
   rectSortingStrategy,
-  arrayMove,
+  sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
+import {
+  snapCenterToCursor,
+  restrictToWindowEdges,
+  restrictToFirstScrollableAncestor,
+} from "@dnd-kit/modifiers";
 import React from "react";
 import { createPortal } from "react-dom";
 import { CSS } from "@dnd-kit/utilities";
-import { Add } from "@mui/icons-material";
-import {
-  restrictToFirstScrollableAncestor,
-  restrictToWindowEdges,
-  snapCenterToCursor,
-} from "@dnd-kit/modifiers";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/utils/db";
-import { ScrollToTopButton } from "@/components/scroll";
 import { useQueries } from "@tanstack/react-query";
+import {
+  AcUnit,
+  AddPhotoAlternate,
+  BubbleChart,
+  DoNotDisturb,
+  LinearScale,
+} from "@mui/icons-material";
+import { db } from "@/utils/db";
 import { useBackground } from "@/hooks/useBackground";
+import { ScrollToTopButton } from "@/components/scroll";
 import type { IndexableTypeArray } from "dexie";
 
 const calculatePageCount = (count: number, pageSize: number) => {
@@ -127,6 +142,14 @@ const calcualteUnactivedBackgroundIds = (
   return unactivatedIds;
 };
 
+const collisionDetection: CollisionDetection = (args) => {
+  if (args.pointerCoordinates) {
+    return pointerWithin(args);
+  }
+
+  return rectIntersection(args);
+};
+
 const databaseIdsInitializer = (): number[] => [];
 
 const StyledImg = styled("img")({
@@ -143,10 +166,15 @@ const StyledImg = styled("img")({
   userSelect: "none",
 });
 
-const FullBox = styled("div")({
+const StyledImageContainer = styled("div")({
+  position: "relative",
+
   inlineSize: "100%",
   blockSize: "100%",
+  borderRadius: 1,
 
+  overflow: "hidden",
+  aspectRatio: "1/1",
   userSelect: "none",
 });
 
@@ -164,12 +192,31 @@ const ImageGrid = styled("div")(({ theme }) => {
       gridTemplateColumns: "repeat(4,minmax(0,1fr))",
     },
     [theme.breakpoints.up("lg")]: {
-      gridTemplateColumns: "repeat(6,minmax(0,1fr))",
+      gridTemplateColumns: "repeat(5,minmax(0,1fr))",
     },
     [theme.breakpoints.up("xl")]: {
-      gridTemplateColumns: "repeat(8,minmax(0,1fr))",
+      gridTemplateColumns: "repeat(6,minmax(0,1fr))",
     },
   };
+});
+
+const StyledDroppable = styled("div")({
+  minHeight: 160,
+});
+
+const StyledDroppableWrapper = styled("div")(({ theme }) => {
+  return {
+    borderColor: theme.palette.divider,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderRadius: theme.shape.borderRadius,
+
+    padding: theme.spacing(2),
+  };
+});
+
+const StyledSortable = styled("div")({
+  touchAction: "none",
 });
 
 const useBorderBoxSize = <TEl extends Element>() => {
@@ -235,15 +282,7 @@ const ImageCell = (props: ImageCellProps) => {
   );
 
   return (
-    <FullBox
-      ref={boxRef}
-      sx={{
-        position: "relative",
-        overflow: "hidden",
-        aspectRatio: "1/1",
-        borderRadius: 1,
-      }}
-    >
+    <StyledImageContainer ref={boxRef}>
       {isShowImage && (
         <StyledImg
           src={imageHref}
@@ -253,7 +292,7 @@ const ImageCell = (props: ImageCellProps) => {
           draggable={false}
         />
       )}
-    </FullBox>
+    </StyledImageContainer>
   );
 };
 
@@ -269,12 +308,12 @@ const ColorPanel = () => {
   );
 };
 
-type DroppableWrapperProps = {
+type DroppableProps = {
   id: UniqueIdentifier;
   children?: React.ReactNode;
 };
 
-const DroppableWrapper = (props: DroppableWrapperProps) => {
+const Droppable = (props: DroppableProps) => {
   const droppable = useDroppable({
     id: props.id,
     data: {
@@ -283,7 +322,7 @@ const DroppableWrapper = (props: DroppableWrapperProps) => {
   });
 
   return (
-    <Box
+    <StyledDroppable
       ref={(el) => {
         const isHTMLEl = calculateIsHTMLEl(el);
         if (!isHTMLEl) return;
@@ -294,12 +333,9 @@ const DroppableWrapper = (props: DroppableWrapperProps) => {
           droppable.setNodeRef(null);
         };
       }}
-      sx={{
-        minHeight: 100,
-      }}
     >
       {props.children}
-    </Box>
+    </StyledDroppable>
   );
 };
 
@@ -314,24 +350,25 @@ const GalleryDragOverlay = (props: GalleryDragOverlayProps) => {
   );
 };
 
-type SortableWrapperProps = {
+type SortableProps = {
   id: UniqueIdentifier;
   containerId: UniqueIdentifier;
   children?: React.ReactNode;
 };
 
-const SortableWrapper = (props: SortableWrapperProps) => {
-  const [ref, entry] = useResizeObserver();
+const Sortable = (props: SortableProps) => {
+  const theme = useTheme();
+  const [ref, inlineSize] = useBorderBoxSize();
   const sortable = useSortable({
     id: props.id,
     data: {
-      width: useResizeObserver.inlineSize(entry?.borderBoxSize),
+      width: inlineSize,
       containerId: props.containerId,
     },
   });
 
   return (
-    <div
+    <StyledSortable
       ref={(el) => {
         ref.current = el;
         sortable.setNodeRef(el);
@@ -345,12 +382,15 @@ const SortableWrapper = (props: SortableWrapperProps) => {
         transform: CSS.Transform.toString(sortable.transform),
         transition: sortable.transition,
         opacity: sortable.isDragging ? 0.25 : void 0,
+        outlineColor: sortable.isDragging
+          ? theme.palette.action.active
+          : void 0,
       }}
       {...sortable.attributes}
       {...sortable.listeners}
     >
       {props.children}
-    </div>
+    </StyledSortable>
   );
 };
 
@@ -363,6 +403,9 @@ const GalleryPanel = () => {
 
   const fileInputId = React.useId();
 
+  const gallery = useSyncStore((store) => store.gallery);
+  const theme = useTheme();
+
   const sensors = useSensors(
     useSensor(MouseSensor),
     useSensor(TouchSensor),
@@ -371,8 +414,6 @@ const GalleryPanel = () => {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-
-  const gallery = useSyncStore((store) => store.gallery);
 
   const count = useLiveQuery(() => {
     return db.backgrounds.count();
@@ -440,10 +481,11 @@ const GalleryPanel = () => {
   return (
     <Card>
       <CardHeader
-        title="幻灯片放映"
+        title="图片"
+        subheader="尝试拖动下方的图像?👋"
         action={
           <IconButton component="label" htmlFor={fileInputId}>
-            <Add />
+            <AddPhotoAlternate />
             <input
               type="file"
               id={fileInputId}
@@ -462,6 +504,7 @@ const GalleryPanel = () => {
           </IconButton>
         }
       />
+      <Divider />
       <CardContent>
         <Stack spacing={0}>
           <DndContext
@@ -471,7 +514,7 @@ const GalleryPanel = () => {
               restrictToFirstScrollableAncestor,
               restrictToWindowEdges,
             ]}
-            collisionDetection={pointerWithin}
+            collisionDetection={collisionDetection}
             measuring={{
               droppable: {
                 strategy: MeasuringStrategy.Always,
@@ -490,35 +533,42 @@ const GalleryPanel = () => {
               const overContainer = calculateContainerId(over.data.current);
               if (!overContainer) return;
 
-              // Same container, only move element
+              /**
+               * Same container
+               */
               if (activeContainer === overContainer) {
                 return;
               }
 
               // Cut element from activeContainer to overContainer
               if (overContainer === "gallery") {
-                useSyncStore.setState((draft) => {
-                  draft.gallery = [...draft.gallery, +active.id];
+                React.startTransition(() => {
+                  useSyncStore.setState((draft) => {
+                    draft.gallery = [...draft.gallery, +active.id];
+                  });
                 });
 
                 return;
               }
 
               if (overContainer === "database") {
-                useSyncStore.setState((draft) => {
-                  draft.gallery = draft.gallery.filter(
-                    (id) => !Object.is(id, active.id),
+                React.startTransition(() => {
+                  useSyncStore.setState((draft) => {
+                    draft.gallery = draft.gallery.filter(
+                      (id) => !Object.is(id, active.id),
+                    );
+                  });
+                  setDatabaseIds((prev) =>
+                    prev.filter((id) => !Object.is(id, active.id)),
                   );
                 });
-                setDatabaseIds((prev) =>
-                  prev.filter((id) => !Object.is(id, active.id)),
-                );
 
                 return;
               }
             }}
             onDragEnd={({ active, over }) => {
               setActiveId(0);
+              setWidth(0);
 
               if (!over) return;
 
@@ -548,43 +598,75 @@ const GalleryPanel = () => {
             }}
             onDragCancel={() => {
               setActiveId(0);
+              setWidth(0);
             }}
           >
-            <DroppableWrapper id="gallery">
-              <ImageGrid>
-                <SortableContext items={gallery} strategy={rectSortingStrategy}>
-                  {gallery?.map((image) => (
-                    <SortableWrapper
-                      key={image}
-                      id={image}
-                      containerId={"gallery"}
-                    >
-                      <ImageCell id={image} />
-                    </SortableWrapper>
-                  ))}
-                </SortableContext>
-              </ImageGrid>
-            </DroppableWrapper>
-            <Divider>Databse</Divider>
-            <DroppableWrapper id="database">
-              <ImageGrid>
-                <SortableContext
-                  items={unactivedIds}
-                  strategy={rectSortingStrategy}
-                >
-                  {unactivedIds.map((id) => (
-                    <SortableWrapper key={id} id={id} containerId={"database"}>
-                      <ImageCell id={id} />
-                    </SortableWrapper>
-                  ))}
-                </SortableContext>
-              </ImageGrid>
-            </DroppableWrapper>
+            <StyledDroppableWrapper
+              style={{
+                backgroundColor: gallery.includes(+activeId)
+                  ? theme.palette.action.hover
+                  : void 0,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  paddingBlockEnd: 1.5,
+                }}
+              >
+                已使用的图像
+              </Typography>
+              <Droppable id="gallery">
+                <ImageGrid>
+                  <SortableContext
+                    items={gallery}
+                    strategy={rectSortingStrategy}
+                  >
+                    {gallery.map((image) => (
+                      <Sortable key={image} id={image} containerId={"gallery"}>
+                        <ImageCell id={image} />
+                      </Sortable>
+                    ))}
+                  </SortableContext>
+                </ImageGrid>
+              </Droppable>
+            </StyledDroppableWrapper>
+            <Divider>分隔线</Divider>
+            <StyledDroppableWrapper
+              style={{
+                backgroundColor: unactivedIds.includes(+activeId)
+                  ? theme.palette.action.hover
+                  : void 0,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  paddingBlockEnd: 1.5,
+                }}
+              >
+                已保存的图像
+              </Typography>
+              <Droppable id="database">
+                <ImageGrid>
+                  <SortableContext
+                    items={unactivedIds}
+                    strategy={rectSortingStrategy}
+                  >
+                    {unactivedIds.map((id) => (
+                      <Sortable key={id} id={id} containerId={"database"}>
+                        <ImageCell id={id} />
+                      </Sortable>
+                    ))}
+                  </SortableContext>
+                </ImageGrid>
+              </Droppable>
+            </StyledDroppableWrapper>
             <GalleryDragOverlay>
               {!!activeId && (
-                <Box sx={{ width }}>
+                <div style={{ width }}>
                   <ImageCell id={+activeId} />
-                </Box>
+                </div>
               )}
             </GalleryDragOverlay>
           </DndContext>
@@ -618,8 +700,13 @@ const BackgroundTypePanel = ({ backgroundType }: BackgroundTypePanelProps) => {
 };
 
 export const Component = () => {
+  const blur = useSyncStore((s) => s.blur);
+  const alpha = useSyncStore((s) => s.alpha);
+  const preset = useSyncStore((s) => s.preset);
   const backgroundType = useSyncStore((store) => store.backgroundType);
+  const theme = useTheme();
 
+  const setSyncStore = useSyncStore.setState;
   const setSync = useSyncStore.setState;
 
   return (
@@ -627,45 +714,140 @@ export const Component = () => {
       <ScrollToTopButton />
       <Stack spacing={3} sx={{ paddingBlock: 3 }}>
         <Card>
-          <CardHeader title="背景设置" />
-          <CardContent>
-            <Grid container spacing={3}>
-              <Grid size={12}></Grid>
-            </Grid>
-            <List disablePadding>
-              <ListItem
-                secondaryAction={
-                  <TextField
-                    value={backgroundType}
-                    onChange={(e) => {
-                      setSync((draft) => {
-                        const value = e.target.value;
+          <CardHeader
+            title="背景类型"
+            subheader="图片或纯色?🤔"
+            action={
+              <TextField
+                value={backgroundType}
+                onChange={(e) => {
+                  setSync((draft) => {
+                    const value = e.target.value;
 
-                        switch (value) {
-                          case "gallery":
-                          case "color":
-                            draft.backgroundType = value;
-                        }
-                      });
-                    }}
-                    select
-                    size="small"
-                    sx={{ minInlineSize: 160 }}
-                  >
-                    <MenuItem value="color">纯色</MenuItem>
-                    <MenuItem value="gallery">图片</MenuItem>
-                  </TextField>
-                }
+                    switch (value) {
+                      case "gallery":
+                      case "color":
+                        draft.backgroundType = value;
+                    }
+                  });
+                }}
+                select
+                size="small"
+                sx={{ minInlineSize: 160 }}
               >
-                <ListItemText
-                  primary="个性化设置背景"
-                  secondary="图片背景适用于当前桌面。纯色或幻灯片背景则适用于所有桌面。"
-                />
-              </ListItem>
-            </List>
-          </CardContent>
+                <MenuItem value="color">纯色</MenuItem>
+                <MenuItem value="gallery">图片</MenuItem>
+              </TextField>
+            }
+          />
+          <List disablePadding>
+            <ListItem>
+              <ListItemText
+                primary="个性化设置背景"
+                secondary="图片背景适用于当前桌面。纯色或幻灯片背景则适用于所有桌面。"
+              />
+            </ListItem>
+          </List>
         </Card>
         <BackgroundTypePanel backgroundType={backgroundType} />
+        <Card>
+          <CardHeader title="遮罩和粒子" />
+          <CardContent>
+            <Grid container spacing={1.5}>
+              <Grid size={12}>
+                <FormLabel>粒子特效</FormLabel>
+                <div
+                  style={{
+                    paddingBlockStart: 13,
+                  }}
+                >
+                  <ToggleButtonGroup
+                    value={preset}
+                    onChange={(_, value) => {
+                      switch (value) {
+                        case "snow":
+                        case "links":
+                        case "bubbles":
+                        case "":
+                          setSyncStore((d) => {
+                            d.preset = value;
+                          });
+                      }
+                    }}
+                    exclusive
+                    sx={{
+                      gap: 2,
+                      [`& .${toggleButtonGroupClasses.firstButton}, & .${toggleButtonGroupClasses.middleButton}`]:
+                        {
+                          borderTopRightRadius: theme.shape.borderRadius,
+                          borderBottomRightRadius: theme.shape.borderRadius,
+                        },
+                      [`& .${toggleButtonGroupClasses.lastButton}, & .${toggleButtonGroupClasses.middleButton}`]:
+                        {
+                          borderTopLeftRadius: theme.shape.borderRadius,
+                          borderBottomLeftRadius: theme.shape.borderRadius,
+                          borderLeft: `1px solid ${theme.palette.divider}`,
+                        },
+                      [`& .${toggleButtonGroupClasses.lastButton}.${toggleButtonClasses.disabled}, & .${toggleButtonGroupClasses.middleButton}.${toggleButtonClasses.disabled}`]:
+                        {
+                          borderLeft: `1px solid ${theme.palette.action.disabledBackground}`,
+                        },
+                    }}
+                  >
+                    <ToggleButton value={"snow"}>
+                      <AcUnit />
+                    </ToggleButton>
+                    <ToggleButton value={"links"}>
+                      <LinearScale />
+                    </ToggleButton>
+                    <ToggleButton value={"bubbles"}>
+                      <BubbleChart />
+                    </ToggleButton>
+                    <ToggleButton value={""}>
+                      <DoNotDisturb />
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </div>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <FormLabel>Alpha</FormLabel>
+                <Slider
+                  value={alpha}
+                  onChange={(_, value) => {
+                    if (typeof value !== "number") {
+                      return;
+                    }
+
+                    setSyncStore((d) => {
+                      d.alpha = value;
+                    });
+                  }}
+                  max={100}
+                  min={0}
+                  valueLabelDisplay="auto"
+                />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <FormLabel>Blur</FormLabel>
+                <Slider
+                  value={blur}
+                  onChange={(_, value) => {
+                    if (typeof value !== "number") {
+                      return;
+                    }
+
+                    setSyncStore((d) => {
+                      d.blur = value;
+                    });
+                  }}
+                  max={100}
+                  min={0}
+                  valueLabelDisplay="auto"
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
       </Stack>
     </>
   );
