@@ -1,8 +1,8 @@
 import { db } from "@/utils/db";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const useBackground = (id: number) => {
-  return useQuery({
+export const fetchBackground = (id: number) =>
+  queryOptions({
     queryKey: ["database", "backgrounds", id],
     queryFn: async () => {
       const background = await db.backgrounds.get(id);
@@ -26,4 +26,7 @@ export const useBackground = (id: number) => {
     },
     staleTime: 1000 * 60 * 5,
   });
+
+export const useBackground = (id: number) => {
+  return useQuery(fetchBackground(id));
 };

@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardActions,
   CardContent,
@@ -25,6 +26,7 @@ import {
 } from "@mui/material";
 import {
   CollisionDetection,
+  defaultDropAnimation,
   DndContext,
   DragOverlay,
   KeyboardSensor,
@@ -45,6 +47,8 @@ import {
   SortableContext,
   rectSortingStrategy,
   sortableKeyboardCoordinates,
+  defaultAnimateLayoutChanges,
+  AnimateLayoutChanges,
 } from "@dnd-kit/sortable";
 import {
   snapCenterToCursor,
@@ -60,6 +64,8 @@ import {
   AcUnit,
   AddPhotoAlternate,
   BubbleChart,
+  Colorize,
+  Delete,
   DoNotDisturb,
   LinearScale,
 } from "@mui/icons-material";
@@ -152,6 +158,14 @@ const collisionDetection: CollisionDetection = (args) => {
 
 const databaseIdsInitializer = (): number[] => [];
 
+const arrayRemove = (array: number[], id: number) => {
+  return array.filter((el) => !Object.is(el, id));
+};
+
+const animateLayoutChanges: AnimateLayoutChanges = (args) => {
+  return defaultAnimateLayoutChanges({ ...args, wasDragging: true });
+};
+
 const StyledImg = styled("img")({
   objectFit: "cover",
   objectPosition: "center",
@@ -178,7 +192,7 @@ const StyledImageContainer = styled("div")({
   userSelect: "none",
 });
 
-const ImageGrid = styled("div")(({ theme }) => {
+const StyledImageGrid = styled("div")(({ theme }) => {
   return {
     display: "grid",
     gap: 4,
@@ -219,6 +233,25 @@ const StyledSortable = styled("div")({
   touchAction: "none",
 });
 
+const StyledTrash = styled("div")(({ theme }) => {
+  return {
+    position: "fixed",
+    zIndex: theme.zIndex.modal,
+    insetInline: 0,
+    insetBlockStart: 0,
+
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+
+    height: theme.spacing(25),
+
+    color: theme.palette.error.contrastText,
+  };
+});
+
+const TRASH_ID = "TRASH_ID";
+
 const useBorderBoxSize = <TEl extends Element>() => {
   const [inlineSize, setInlineSize] = React.useState(0);
   const [blockSize, setBlockSize] = React.useState(0);
@@ -255,6 +288,40 @@ const useBorderBoxSize = <TEl extends Element>() => {
   }, []);
 
   return [ref, inlineSize, blockSize] as const;
+};
+
+type TrashProps = {
+  id: string;
+};
+
+const Trash = (props: TrashProps) => {
+  const theme = useTheme();
+  const droppable = useDroppable({
+    id: props.id,
+    data: {
+      containerId: props.id,
+    },
+  });
+
+  return createPortal(
+    <StyledTrash
+      ref={(el) => {
+        droppable.setNodeRef(el);
+
+        return () => {
+          droppable.setNodeRef(null);
+        };
+      }}
+      style={{
+        backgroundColor: droppable.isOver
+          ? theme.palette.error.dark
+          : theme.palette.error.light,
+      }}
+    >
+      <Delete fontSize="large" color="inherit" />
+    </StyledTrash>,
+    document.body,
+  );
 };
 
 type ImageCellProps = {
@@ -296,11 +363,50 @@ const ImageCell = (props: ImageCellProps) => {
   );
 };
 
+const ColorPicker = () => {
+  const [color, setColor] = React.useState("#fff");
+
+  const inputId = React.useId();
+
+  return (
+    <Button
+      variant="outlined"
+      component="label"
+      htmlFor={inputId}
+      startIcon={<Colorize style={{ color }} />}
+    >
+      <input
+        type="color"
+        id={inputId}
+        value={color}
+        onChange={(e) => {
+          setColor(e.target.value);
+        }}
+        style={{
+          position: "absolute",
+
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          borderWidth: 0,
+
+          clipPath: "inset(50%)",
+          whiteSpace: "nowrap",
+        }}
+      />
+      点击选取颜色
+    </Button>
+  );
+};
+
 const ColorPanel = () => {
   return (
     <Card>
       <CardHeader title="纯色" action={<input type="color" />} />
-      <CardContent></CardContent>
+      <CardContent>
+        <ColorPicker />
+      </CardContent>
       <CardActions>
         <Pagination />
       </CardActions>
@@ -339,17 +445,6 @@ const Droppable = (props: DroppableProps) => {
   );
 };
 
-type GalleryDragOverlayProps = {
-  children?: React.ReactNode;
-};
-
-const GalleryDragOverlay = (props: GalleryDragOverlayProps) => {
-  return createPortal(
-    <DragOverlay>{props.children}</DragOverlay>,
-    document.body,
-  );
-};
-
 type SortableProps = {
   id: UniqueIdentifier;
   containerId: UniqueIdentifier;
@@ -365,6 +460,7 @@ const Sortable = (props: SortableProps) => {
       width: inlineSize,
       containerId: props.containerId,
     },
+    animateLayoutChanges,
   });
 
   return (
@@ -400,6 +496,9 @@ const GalleryPanel = () => {
   const [activeId, setActiveId] = React.useState<UniqueIdentifier>(0);
   const [width, setWidth] = React.useState(0);
   const [databaseIds, setDatabaseIds] = React.useState(databaseIdsInitializer);
+  const [enableDropAnimation, setEnableDropAnimation] = React.useState(true);
+
+  const debounceRef = React.useRef(0);
 
   const fileInputId = React.useId();
 
@@ -426,10 +525,20 @@ const GalleryPanel = () => {
       .keys();
   }, [pageIndex, pageSize]);
 
+  const paginationIds =
+    paginationKeys?.filter((id) => typeof id === "number") || [];
+
+  const [oPaginationKeys, oPaginationKeysAction] = React.useOptimistic(
+    paginationIds,
+    (previous, id: number) => {
+      return arrayRemove(previous, id);
+    },
+  );
+
   const unactivedIds = calcualteUnactivedBackgroundIds(
     gallery,
     databaseIds,
-    paginationKeys,
+    oPaginationKeys,
   );
 
   const queries = useQueries({
@@ -462,6 +571,20 @@ const GalleryPanel = () => {
 
   const objectURLStore = React.use(ObjectURLContext);
 
+  const handleRemove = (id: number) => {
+    cancelAnimationFrame(debounceRef.current);
+    debounceRef.current = requestAnimationFrame(() => {
+      React.startTransition(async () => {
+        oPaginationKeysAction(id);
+        useSyncStore.setState((draft) => {
+          draft.gallery = arrayRemove(draft.gallery, id);
+        });
+        setDatabaseIds((previous) => arrayRemove(previous, id));
+        await db.backgrounds.delete(id);
+      });
+    });
+  };
+
   React.useEffect(() => {
     queries.forEach((query) => {
       if (query.isSuccess) {
@@ -482,7 +605,7 @@ const GalleryPanel = () => {
     <Card>
       <CardHeader
         title="图片"
-        subheader="尝试拖动下方的图像?👋"
+        subheader="尝试拖动下方的图像👋 or 点击右侧的图标按钮➡️"
         action={
           <IconButton component="label" htmlFor={fileInputId}>
             <AddPhotoAlternate />
@@ -533,6 +656,10 @@ const GalleryPanel = () => {
               const overContainer = calculateContainerId(over.data.current);
               if (!overContainer) return;
 
+              if (overContainer === TRASH_ID) {
+                return;
+              }
+
               /**
                * Same container
                */
@@ -572,8 +699,19 @@ const GalleryPanel = () => {
 
               if (!over) return;
 
+              const activeId = +active.id;
               const activeContainer = calculateContainerId(active.data.current);
+              if (!activeContainer) return;
+
+              const overId = +over.id;
               const overContainer = calculateContainerId(over.data.current);
+              if (!overContainer) return;
+
+              if (overContainer === TRASH_ID) {
+                setEnableDropAnimation(false);
+                handleRemove(activeId);
+                return;
+              }
 
               if (activeContainer !== overContainer) {
                 return;
@@ -581,19 +719,23 @@ const GalleryPanel = () => {
 
               if (activeContainer === "gallery") {
                 useSyncStore.setState((draft) => {
-                  const formIndex = draft.gallery.indexOf(+active.id);
-                  const toIndex = draft.gallery.indexOf(+over.id);
+                  const formIndex = draft.gallery.indexOf(activeId);
+                  const toIndex = draft.gallery.indexOf(overId);
 
                   draft.gallery = arrayMove(draft.gallery, formIndex, toIndex);
                 });
+
+                return;
               }
 
               if (activeContainer === "database") {
-                const formIndex = unactivedIds.indexOf(+active.id);
-                const toIndex = unactivedIds.indexOf(+over.id);
+                const formIndex = unactivedIds.indexOf(activeId);
+                const toIndex = unactivedIds.indexOf(overId);
                 const sortResult = arrayMove(unactivedIds, formIndex, toIndex);
 
                 setDatabaseIds(sortResult);
+
+                return;
               }
             }}
             onDragCancel={() => {
@@ -601,6 +743,7 @@ const GalleryPanel = () => {
               setWidth(0);
             }}
           >
+            {!!activeId && <Trash id={TRASH_ID} />}
             <StyledDroppableWrapper
               style={{
                 backgroundColor: gallery.includes(+activeId)
@@ -617,7 +760,7 @@ const GalleryPanel = () => {
                 已使用的图像
               </Typography>
               <Droppable id="gallery">
-                <ImageGrid>
+                <StyledImageGrid>
                   <SortableContext
                     items={gallery}
                     strategy={rectSortingStrategy}
@@ -628,7 +771,7 @@ const GalleryPanel = () => {
                       </Sortable>
                     ))}
                   </SortableContext>
-                </ImageGrid>
+                </StyledImageGrid>
               </Droppable>
             </StyledDroppableWrapper>
             <Divider>分隔线</Divider>
@@ -648,7 +791,7 @@ const GalleryPanel = () => {
                 已保存的图像
               </Typography>
               <Droppable id="database">
-                <ImageGrid>
+                <StyledImageGrid>
                   <SortableContext
                     items={unactivedIds}
                     strategy={rectSortingStrategy}
@@ -659,16 +802,22 @@ const GalleryPanel = () => {
                       </Sortable>
                     ))}
                   </SortableContext>
-                </ImageGrid>
+                </StyledImageGrid>
               </Droppable>
             </StyledDroppableWrapper>
-            <GalleryDragOverlay>
-              {!!activeId && (
+            {createPortal(
+              <DragOverlay
+                dropAnimation={
+                  enableDropAnimation ? defaultDropAnimation : null
+                }
+                zIndex={theme.zIndex.modal + 1}
+              >
                 <div style={{ width }}>
                   <ImageCell id={+activeId} />
                 </div>
-              )}
-            </GalleryDragOverlay>
+              </DragOverlay>,
+              document.body,
+            )}
           </DndContext>
         </Stack>
       </CardContent>
@@ -716,7 +865,7 @@ export const Component = () => {
         <Card>
           <CardHeader
             title="背景类型"
-            subheader="图片或纯色?🤔"
+            subheader="图片 or 纯色🤔"
             action={
               <TextField
                 value={backgroundType}
@@ -743,8 +892,8 @@ export const Component = () => {
           <List disablePadding>
             <ListItem>
               <ListItemText
-                primary="个性化设置背景"
-                secondary="图片背景适用于当前桌面。纯色或幻灯片背景则适用于所有桌面。"
+                primary="设置背景为图片"
+                secondary="设置背景为图片时，若使用多张图片可在新标签页切换下一张壁纸"
               />
             </ListItem>
           </List>
@@ -810,7 +959,7 @@ export const Component = () => {
                 </div>
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <FormLabel>Alpha</FormLabel>
+                <FormLabel>遮罩亮度</FormLabel>
                 <Slider
                   value={alpha}
                   onChange={(_, value) => {
@@ -828,7 +977,7 @@ export const Component = () => {
                 />
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <FormLabel>Blur</FormLabel>
+                <FormLabel>背景模糊</FormLabel>
                 <Slider
                   value={blur}
                   onChange={(_, value) => {

@@ -20,6 +20,7 @@ import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { browser } from "wxt/browser";
 import { db } from "@/utils/db";
 import snowVillage from "./snowVillage.jpg";
+import { usePrefetchQuery } from "@tanstack/react-query";
 
 const calculateBackgroundId = (gallery: number[], wallpaperId: number) => {
   const isIncludesWallpaperId = gallery.includes(wallpaperId);
@@ -137,6 +138,14 @@ const NewTab = () => {
   const preset = useSyncStore((s) => s.preset);
   const gallery = useSyncStore((store) => store.gallery);
   const backgroundImage = useBackgroundImage();
+  const wallpaperId = useSyncStore((store) => store.wallpaperId);
+
+  const backgroundId = calculateBackgroundId(gallery, wallpaperId);
+  const currentIndex = gallery.indexOf(backgroundId);
+  const nextIndex = calculateNextIndex(currentIndex, gallery.length);
+  const nextId = gallery.at(nextIndex) || 0;
+
+  usePrefetchQuery(fetchBackground(nextId));
 
   const set = useSyncStore.setState;
 

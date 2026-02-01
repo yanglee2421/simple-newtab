@@ -17,6 +17,11 @@ const calculateIsDark = (mode: Mode, colorScheme: boolean) => {
 const theme = createTheme({
   palette: {
     mode: "light",
+    primary: {
+      main: "#67D55E",
+      light: "#85dd7e",
+      dark: "#489541",
+    },
   },
   components: {
     MuiPaper: {
@@ -33,6 +38,11 @@ const theme = createTheme({
 const darkTheme = createTheme({
   palette: {
     mode: "dark",
+    primary: {
+      main: "#67D55E",
+      light: "#85dd7e",
+      dark: "#489541",
+    },
   },
   components: {
     MuiPaper: {

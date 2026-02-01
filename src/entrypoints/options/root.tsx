@@ -14,7 +14,12 @@ import React from "react";
 import { Container, useTheme } from "@mui/material";
 import { Image, FormatQuote } from "@mui/icons-material";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
-import type { Navigation } from "@toolpad/core";
+import wxtLogo from "@/assets/wxt.svg";
+import type { Branding, Navigation } from "@toolpad/core";
+
+const calculateAssetsHref = (path: string) => {
+  return new URL(path, import.meta.url).href;
+};
 
 const calculateLanguage = (langInParams = "", langInStore: string) => {
   const LANGS = new Set(["en", "zh"]);
@@ -36,23 +41,30 @@ const calculatePath = (...args: unknown[]) => args.join("/");
 const createNavition = (lang: string): Navigation => [
   {
     kind: "header",
-    title: "Fontend",
+    title: "设置",
   },
   {
     segment: calculatePath(lang),
-    title: "Background",
+    title: "背景设置",
     icon: <Image />,
   },
   {
     segment: calculatePath(lang, "quotes"),
-    title: "Quotes",
+    title: "每日一言",
     icon: <FormatQuote />,
   },
 ];
 
-const BRANDING = {
-  title: "Simple NewTab",
+const createBranding = (): Branding => {
+  const logoHref = calculateAssetsHref(wxtLogo);
+
+  return {
+    title: "标签页设置",
+    logo: <img src={logoHref} alt="logo" width={24} height={24} />,
+  };
 };
+
+const BRANDING: Branding = createBranding();
 
 const useNavigation = () => {
   const params = useParams();
