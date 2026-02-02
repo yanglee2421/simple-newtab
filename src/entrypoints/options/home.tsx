@@ -25,6 +25,15 @@ import {
   useTheme,
 } from "@mui/material";
 import {
+  AcUnit,
+  AddPhotoAlternate,
+  BubbleChart,
+  Colorize,
+  Delete,
+  DoNotDisturb,
+  LinearScale,
+} from "@mui/icons-material";
+import {
   CollisionDetection,
   defaultDropAnimation,
   DndContext,
@@ -60,15 +69,6 @@ import { createPortal } from "react-dom";
 import { CSS } from "@dnd-kit/utilities";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useQueries } from "@tanstack/react-query";
-import {
-  AcUnit,
-  AddPhotoAlternate,
-  BubbleChart,
-  Colorize,
-  Delete,
-  DoNotDisturb,
-  LinearScale,
-} from "@mui/icons-material";
 import { db } from "@/utils/db";
 import { useBackground } from "@/hooks/useBackground";
 import { ScrollToTopButton } from "@/components/scroll";
@@ -157,7 +157,7 @@ const collisionDetection: CollisionDetection = (args) => {
   return rectIntersection(args);
 };
 
-const databaseIdsInitializer = (): number[] => [];
+const idsInitializer = (): number[] => [];
 
 const arrayRemove = (array: number[], id: number) => {
   return array.filter((el) => !Object.is(el, id));
@@ -251,10 +251,23 @@ const StyledTrash = styled("div")(({ theme }) => {
     justifyContent: "center",
     alignItems: "center",
 
-    height: theme.spacing(25),
+    height: theme.spacing(20),
 
     color: theme.palette.error.contrastText,
   };
+});
+
+const StyledColorInput = styled("input")({
+  position: "absolute",
+
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  borderWidth: 0,
+
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
 });
 
 const TRASH_ID = "TRASH_ID";
@@ -370,9 +383,12 @@ const ImageCell = (props: ImageCellProps) => {
   );
 };
 
-const ColorPicker = () => {
-  const [color, setColor] = React.useState("#fff");
+type ColorPickerProps = {
+  value: string;
+  onChange: (value: string) => void;
+};
 
+const ColorPicker = (props: ColorPickerProps) => {
   const inputId = React.useId();
 
   return (
@@ -380,26 +396,14 @@ const ColorPicker = () => {
       variant="outlined"
       component="label"
       htmlFor={inputId}
-      startIcon={<Colorize style={{ color }} />}
+      startIcon={<Colorize style={{ color: props.value }} />}
     >
-      <input
+      <StyledColorInput
         type="color"
         id={inputId}
-        value={color}
+        value={props.value}
         onChange={(e) => {
-          setColor(e.target.value);
-        }}
-        style={{
-          position: "absolute",
-
-          width: 1,
-          height: 1,
-          padding: 0,
-          margin: -1,
-          borderWidth: 0,
-
-          clipPath: "inset(50%)",
-          whiteSpace: "nowrap",
+          props.onChange(e.target.value);
         }}
       />
       点击选取颜色
@@ -408,11 +412,20 @@ const ColorPicker = () => {
 };
 
 const ColorPanel = () => {
+  const backgroundColor = useSyncStore((store) => store.backgroundColor);
+
   return (
     <Card>
-      <CardHeader title="纯色" action={<input type="color" />} />
+      <CardHeader title="纯色" />
       <CardContent>
-        <ColorPicker />
+        <ColorPicker
+          value={backgroundColor}
+          onChange={(e) => {
+            useSyncStore.setState((draft) => {
+              draft.backgroundColor = e;
+            });
+          }}
+        />
       </CardContent>
       <CardActions>
         <Pagination />
@@ -502,9 +515,9 @@ const GalleryPanel = () => {
   const [pageSize] = React.useState(24);
   const [activeId, setActiveId] = React.useState<UniqueIdentifier>(0);
   const [width, setWidth] = React.useState(0);
-  const [databaseIds, setDatabaseIds] = React.useState(databaseIdsInitializer);
+  const [databaseIds, setDatabaseIds] = React.useState(idsInitializer);
   const [enableDropAnimation, setEnableDropAnimation] = React.useState(true);
-  const [trashedIds, setTrashedIds] = React.useState(databaseIdsInitializer);
+  const [trashedIds, setTrashedIds] = React.useState(idsInitializer);
 
   const debounceRef = React.useRef(0);
 
@@ -862,7 +875,14 @@ export const Component = () => {
   const theme = useTheme();
 
   const setSyncStore = useSyncStore.setState;
-  const setSync = useSyncStore.setState;
+
+  const primaryText =
+    backgroundType === "color" ? "设置背景为纯色" : "设置背景为图片";
+
+  const secondaryText =
+    backgroundType === "color"
+      ? "设置背景为纯色时，背景仅展示被选中的颜色，不显示背景图"
+      : "设置背景为图片时，若使用多张图片可在新标签页切换下一张壁纸";
 
   return (
     <>
@@ -876,7 +896,7 @@ export const Component = () => {
               <TextField
                 value={backgroundType}
                 onChange={(e) => {
-                  setSync((draft) => {
+                  setSyncStore((draft) => {
                     const value = e.target.value;
 
                     switch (value) {
@@ -897,10 +917,7 @@ export const Component = () => {
           />
           <List disablePadding>
             <ListItem>
-              <ListItemText
-                primary="设置背景为图片"
-                secondary="设置背景为图片时，若使用多张图片可在新标签页切换下一张壁纸"
-              />
+              <ListItemText primary={primaryText} secondary={secondaryText} />
             </ListItem>
           </List>
         </Card>

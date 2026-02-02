@@ -65,6 +65,17 @@ const calculateChineseLunar = (date: Date) => {
   return dateFormater.format(date);
 };
 
+const calculateIsShowNextImage = (
+  backgroundType: BackgroundType,
+  gallery: number[],
+) => {
+  if (backgroundType !== "gallery") {
+    return;
+  }
+
+  return gallery.length > 1;
+};
+
 const particlesInitializer = () => {
   return initParticlesEngine(async (e) => {
     await loadSnowPreset(e);
@@ -137,8 +148,10 @@ const NewTab = () => {
   const blur = useSyncStore((s) => s.blur);
   const preset = useSyncStore((s) => s.preset);
   const gallery = useSyncStore((store) => store.gallery);
-  const backgroundImage = useBackgroundImage();
   const wallpaperId = useSyncStore((store) => store.wallpaperId);
+  const backgroundType = useSyncStore((store) => store.backgroundType);
+  const backgroundColor = useSyncStore((store) => store.backgroundColor);
+  const backgroundImage = useBackgroundImage();
 
   const backgroundId = calculateBackgroundId(gallery, wallpaperId);
   const currentIndex = gallery.indexOf(backgroundId);
@@ -146,6 +159,8 @@ const NewTab = () => {
   const nextId = gallery.at(nextIndex) || 0;
 
   usePrefetchQuery(fetchBackground(nextId));
+
+  const isShowNextImage = calculateIsShowNextImage(backgroundType, gallery);
 
   const set = useSyncStore.setState;
 
@@ -202,6 +217,8 @@ const NewTab = () => {
       <Background
         alpha={alpha}
         blur={blur}
+        backgroundType={backgroundType}
+        backgroundColor={backgroundColor}
         backgroundImage={backgroundImage}
         preset={preset}
         ref={maskRef}
@@ -233,7 +250,7 @@ const NewTab = () => {
             </ListItemIcon>
             <ListItemText primary="设置" />
           </MenuItem>
-          {gallery.length > 1 && (
+          {isShowNextImage && (
             <MenuItem onClick={handleNextWallpare}>
               <ListItemIcon>
                 <Wallpaper />
@@ -248,17 +265,30 @@ const NewTab = () => {
 };
 
 type BackgroundProps = {
-  preset: string;
+  ref: React.Ref<HTMLDivElement>;
   alpha: number;
   blur: number;
+  backgroundType: BackgroundType;
   backgroundImage: string;
-  ref: React.Ref<HTMLDivElement>;
+  backgroundColor: string;
+  preset: string;
 };
 
 const Background = (props: BackgroundProps) => {
-  const { preset, alpha, blur, backgroundImage, ref } = props;
+  const {
+    preset,
+    alpha,
+    blur,
+    backgroundImage,
+    backgroundColor,
+    backgroundType,
+    ref,
+  } = props;
 
   const blurValue = blur / 5;
+  const bgImageHref =
+    backgroundType === "gallery" ? `url(${backgroundImage})` : void 0;
+  const bgColor = backgroundType === "color" ? backgroundColor : void 0;
 
   return (
     <>
@@ -267,7 +297,8 @@ const Background = (props: BackgroundProps) => {
           style={{
             inset: -2 * blurValue,
             filter: `blur(${blurValue}px)`,
-            backgroundImage: `url(${backgroundImage})`,
+            backgroundImage: bgImageHref,
+            backgroundColor: bgColor,
           }}
         />
       </StyledBackgroundImageWrapper>

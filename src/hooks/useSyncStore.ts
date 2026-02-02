@@ -8,14 +8,17 @@ export type BackgroundType = "color" | "gallery";
 export type Mode = "system" | "light" | "dark";
 
 type Store = {
+  mode: Mode;
+  lang: string;
+
+  preset: Preset;
+
   alpha: number;
   blur: number;
-  lang: string;
-  preset: Preset;
   backgroundType: BackgroundType;
   wallpaperId: number;
   gallery: number[];
-  mode: Mode;
+  backgroundColor: string;
 };
 
 const storeInitializer = (): Store => {
@@ -28,6 +31,7 @@ const storeInitializer = (): Store => {
     wallpaperId: 0,
     gallery: [],
     mode: "system",
+    backgroundColor: "oklch(58.5% 0.233 277.117)",
   };
 };
 
@@ -35,7 +39,7 @@ export const useSyncStore = create<Store>()(
   persist(immer(storeInitializer), {
     name: "useSyncStore",
     storage: createJSONStorage(() => localStorage),
-    version: 8,
+    version: 9,
   }),
 );
 

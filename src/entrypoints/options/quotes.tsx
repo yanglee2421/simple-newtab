@@ -16,7 +16,6 @@ import {
   TextField,
 } from "@mui/material";
 import {
-  Add,
   Delete,
   FormatQuote,
   HistoryEdu,
@@ -70,11 +69,12 @@ export const Component = () => {
       content: "",
       anthor: "",
     },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, formApi }) => {
       await db.quotes.add({
         content: value.content,
         anthor: value.anthor,
       });
+      formApi.reset();
     },
     validators: {
       onChange: schema,
@@ -112,14 +112,13 @@ export const Component = () => {
   return (
     <Stack spacing={3} sx={{ paddingBlock: 3 }}>
       <Card>
-        <CardHeader title="Quotes" subheader="新增句子" action={<Add />} />
+        <CardHeader title="每日一言" subheader="写不出的时候不硬写。--鲁迅" />
         <CardContent>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
               e.stopPropagation();
               await form.handleSubmit();
-              form.reset();
             }}
             id={formId}
             noValidate
@@ -163,6 +162,7 @@ export const Component = () => {
                         },
                       }}
                       label="语录"
+                      placeholder="写不出的时候不硬写。"
                     />
                   )}
                 </form.AppField>
@@ -205,6 +205,7 @@ export const Component = () => {
                         },
                       }}
                       label="作者"
+                      placeholder="鲁迅"
                     />
                   )}
                 </form.AppField>
@@ -214,7 +215,7 @@ export const Component = () => {
         </CardContent>
         <CardActions>
           <Button type="submit" form={formId} tabIndex={3} startIcon={<Save />}>
-            Submit
+            保存
           </Button>
           <Button
             type="reset"
@@ -222,12 +223,15 @@ export const Component = () => {
             tabIndex={4}
             startIcon={<Restore />}
           >
-            Reset
+            重置
           </Button>
         </CardActions>
       </Card>
       <Card>
-        <CardHeader title="已存储的" subheader="以下是已存入的句子" />
+        <CardHeader
+          title="已保存"
+          subheader="已保存的条目会在标签页打开时随机选择一条进行显示"
+        />
         <List disablePadding>{renderListRows()}</List>
         <CardActions>
           <Pagination
