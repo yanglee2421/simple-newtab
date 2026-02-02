@@ -2,7 +2,7 @@
   "name": "simple-newtab",
   "description": "A simple new tab page that supports changing the background image and includes some basic effects.",
   "private": true,
-  "version": "0.0.3",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
