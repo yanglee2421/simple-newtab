@@ -1,18 +1,26 @@
+import React from "react";
 import { ThemeProvider } from "@emotion/react";
 import { createTheme, CssBaseline } from "@mui/material";
-import React from "react";
 
-const lightBg = "rgba(243, 243, 243, .85)";
+const calculateIsDark = (mode: Mode, colorScheme: boolean) => {
+  switch (mode) {
+    case "light":
+      return false;
+    case "dark":
+      return true;
+    case "system":
+    default:
+      return colorScheme;
+  }
+};
 
 const theme = createTheme({
-  spacing(abs: number) {
-    return `${0.25 * abs}rem`;
-  },
   palette: {
     mode: "light",
-    background: {
-      default: lightBg,
-      paper: lightBg,
+    primary: {
+      main: "#67D55E",
+      light: "#85dd7e",
+      dark: "#489541",
     },
   },
   components: {
@@ -27,18 +35,13 @@ const theme = createTheme({
   },
 });
 
-const darkDefault = "rgba(32, 32, 32, .75)";
-const darkPaper = "rgba(36, 36, 36, .8)";
-
 const darkTheme = createTheme({
-  spacing(abs: number) {
-    return `${0.25 * abs}rem`;
-  },
   palette: {
     mode: "dark",
-    background: {
-      default: darkDefault,
-      paper: darkPaper,
+    primary: {
+      main: "#67D55E",
+      light: "#85dd7e",
+      dark: "#489541",
     },
   },
   components: {
@@ -55,8 +58,8 @@ const darkTheme = createTheme({
 
 const mediaQuery = matchMedia("(prefers-color-scheme: dark)");
 
-const useIsDark = () =>
-  React.useSyncExternalStore(
+const useColorScheme = () => {
+  return React.useSyncExternalStore(
     (onStoreChange) => {
       mediaQuery.addEventListener("change", onStoreChange);
 
@@ -64,13 +67,15 @@ const useIsDark = () =>
         mediaQuery.removeEventListener("change", onStoreChange);
       };
     },
-
     () => mediaQuery.matches,
-    () => false
   );
+};
 
 export const MuiProvider = (props: React.PropsWithChildren) => {
-  const isDark = useIsDark();
+  const colorScheme = useColorScheme();
+  const mode = useSyncStore((store) => store.mode);
+
+  const isDark = calculateIsDark(mode, colorScheme);
 
   return (
     <ThemeProvider theme={isDark ? darkTheme : theme}>

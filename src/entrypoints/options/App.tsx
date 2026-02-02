@@ -1,0 +1,31 @@
+import { z } from "zod";
+import { browser } from "wxt/browser";
+import { MuiProvider } from "@/components/MuiProvider";
+import { QueryProvider } from "@/components/query";
+import { OptionsRouter } from "./router";
+
+const calculateLocale = (language: string) => {
+  const stringArray = language.split("-");
+
+  if (stringArray.length === 1) {
+    return stringArray[0];
+  }
+
+  return stringArray[0] + stringArray[1].toUpperCase();
+};
+
+const language = browser.i18n.getUILanguage();
+
+z.config(Reflect.get(z.locales, calculateLocale(language))?.());
+
+export const App = () => {
+  useSubscribeSyncStoreChange();
+
+  return (
+    <QueryProvider>
+      <MuiProvider>
+        <OptionsRouter />
+      </MuiProvider>
+    </QueryProvider>
+  );
+};
