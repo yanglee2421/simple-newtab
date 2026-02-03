@@ -36,8 +36,9 @@ const calculateLanguage = (langInParams = "", langInStore: string) => {
   return FALLBACK_LANG;
 };
 
-const calculatePath = (...args: unknown[]) => args.join("/");
-
+const calculatePath = (...args: unknown[]) => {
+  return args.join("/");
+};
 const createNavition = (lang: string): Navigation => [
   {
     kind: "header",

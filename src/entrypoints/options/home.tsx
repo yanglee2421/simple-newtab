@@ -40,11 +40,9 @@ import {
   DragOverlay,
   KeyboardSensor,
   MeasuringStrategy,
-  MouseSensor,
   PointerSensor,
   pointerWithin,
   rectIntersection,
-  TouchSensor,
   UniqueIdentifier,
   useDroppable,
   useSensor,
@@ -192,7 +190,7 @@ const StyledImageContainer = styled("div")({
 
   inlineSize: "100%",
   blockSize: "100%",
-  borderRadius: 1,
+  borderRadius: 4,
 
   overflow: "hidden",
   aspectRatio: "1/1",
@@ -238,6 +236,7 @@ const StyledDroppableWrapper = styled("div")(({ theme }) => {
 
 const StyledSortable = styled("div")({
   touchAction: "none",
+  transformOrigin: "0 0",
 });
 
 const StyledTrash = styled("div")(({ theme }) => {
@@ -485,6 +484,8 @@ const Sortable = (props: SortableProps) => {
 
   return (
     <StyledSortable
+      id={props.id + ""}
+      data-container={props.containerId}
       ref={(el) => {
         ref.current = el;
         sortable.setNodeRef(el);
@@ -519,16 +520,12 @@ const GalleryPanel = () => {
   const [enableDropAnimation, setEnableDropAnimation] = React.useState(true);
   const [trashedIds, setTrashedIds] = React.useState(idsInitializer);
 
-  const debounceRef = React.useRef(0);
-
   const fileInputId = React.useId();
 
   const gallery = useSyncStore((store) => store.gallery);
   const theme = useTheme();
 
   const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor),
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -591,18 +588,55 @@ const GalleryPanel = () => {
 
   const objectURLStore = React.use(ObjectURLContext);
 
-  const handleRemove = (id: number) => {
-    cancelAnimationFrame(debounceRef.current);
-    debounceRef.current = requestAnimationFrame(() => {
-      React.startTransition(async () => {
-        oPaginationKeysAction(id);
-        useSyncStore.setState((draft) => {
-          draft.gallery = arrayRemove(draft.gallery, id);
-        });
-        setDatabaseIds((previous) => arrayRemove(previous, id));
-        setTrashedIds((previous) => arrayAdd(previous, id));
-        await db.backgrounds.delete(id);
+  const handleRemove = async (activeContainer: string, id: number) => {
+    const el = document.getElementById(id + "");
+    if (!el) return;
+
+    setEnableDropAnimation(false);
+
+    const alEls = document.querySelectorAll(
+      `[data-container=${activeContainer}]`,
+    );
+
+    const fisrtRects = Array.from(alEls, (el) => el.getBoundingClientRect());
+
+    el.style.display = "none";
+
+    const lastRects = Array.from(alEls, (el) => el.getBoundingClientRect());
+
+    await Promise.allSettled(
+      Array.from(alEls, async (item, index) => {
+        if (item === el) {
+          return;
+        }
+
+        const firstRect = fisrtRects[index];
+        const lastRect = lastRects[index];
+        const translationX = firstRect.x - lastRect.x;
+        const translationY = firstRect.y - lastRect.y;
+        const scaleX = firstRect.width / lastRect.width;
+        const scaleY = firstRect.height / lastRect.height;
+
+        await item.animate(
+          [
+            {
+              transform: `translate3d(${translationX}px,${translationY}px,0) scaleX(${scaleX}) scaleY(${scaleY})`,
+            },
+            { transform: "translate3d(0,0,0) scaleX(1) scaleY(1)" },
+          ],
+          { duration: theme.transitions.duration.shorter },
+        ).finished;
+      }),
+    );
+
+    React.startTransition(async () => {
+      oPaginationKeysAction(id);
+      useSyncStore.setState((draft) => {
+        draft.gallery = arrayRemove(draft.gallery, id);
       });
+      setDatabaseIds((previous) => arrayRemove(previous, id));
+      setTrashedIds((previous) => arrayAdd(previous, id));
+      await db.backgrounds.delete(id);
     });
   };
 
@@ -727,8 +761,7 @@ const GalleryPanel = () => {
               if (!overContainer) return;
 
               if (overContainer === TRASH_ID) {
-                setEnableDropAnimation(false);
-                handleRemove(activeId);
+                handleRemove(activeContainer, activeId);
                 return;
               }
 
