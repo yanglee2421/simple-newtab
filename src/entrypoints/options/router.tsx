@@ -9,6 +9,7 @@ import {
   useLocation,
   useParams,
 } from "react-router";
+import React from "react";
 import { FullScreenProgress } from "@/components/FullScreenProgress";
 import { RootRoute } from "./root";
 
@@ -75,6 +76,12 @@ const LangRoute = () => {
   if (!langSegment) throw new Error("Invalid params lang");
 
   const locale = calculateLocale(fallbackLang, langSegment);
+
+  React.useEffect(() => {
+    useSyncStore.setState((draft) => {
+      draft.lang = locale;
+    });
+  }, [locale]);
 
   if (locale === langSegment) {
     return <Outlet />;
