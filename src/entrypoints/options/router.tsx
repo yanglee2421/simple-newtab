@@ -9,10 +9,11 @@ import {
   useLocation,
   useParams,
 } from "react-router";
+import React from "react";
 import { FullScreenProgress } from "@/components/FullScreenProgress";
 import { RootRoute } from "./root";
 
-const FALLBACK_LANG = "en";
+const DEFAULT_LANG = "en";
 const LANGS = new Set(["en", "zh"]);
 
 const calculateLocale = (fallbackLocale: string, localeSegment: string) => {
@@ -24,7 +25,7 @@ const calculateLocale = (fallbackLocale: string, localeSegment: string) => {
     return fallbackLocale;
   }
 
-  return FALLBACK_LANG;
+  return DEFAULT_LANG;
 };
 
 const calculateLocalePathname = (pathname: string, locale: string) => {
@@ -65,6 +66,12 @@ const LangRoute = () => {
   if (!langInPath) throw new Error("Invalid params lang");
 
   const lang = calculateLocale(fallbackLang, langInPath);
+
+  React.useEffect(() => {
+    useSyncStore.setState((draft) => {
+      draft.lang = lang;
+    });
+  }, [lang]);
 
   if (lang === langInPath) {
     return <Outlet />;
