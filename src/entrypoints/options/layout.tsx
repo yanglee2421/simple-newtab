@@ -1,10 +1,4 @@
-import {
-  Navigate,
-  Outlet,
-  ScrollRestoration,
-  useLocation,
-  useParams,
-} from "react-router";
+import { Outlet, ScrollRestoration, useParams } from "react-router";
 import {
   NotificationsProvider,
   DialogsProvider,
@@ -21,36 +15,22 @@ const calculateAssetsHref = (path: string) => {
   return new URL(path, import.meta.url).href;
 };
 
-const calculateLanguage = (langInParams = "", langInStore: string) => {
-  const LANGS = new Set(["en", "zh"]);
-  const FALLBACK_LANG = "en";
-
-  if (LANGS.has(langInParams)) {
-    return langInParams;
-  }
-
-  if (LANGS.has(langInStore)) {
-    return langInStore;
-  }
-
-  return FALLBACK_LANG;
-};
-
-const calculatePath = (...args: unknown[]) => {
+const calculateSegment = (...args: unknown[]) => {
   return args.join("/");
 };
+
 const createNavition = (lang: string): Navigation => [
   {
     kind: "header",
     title: "设置",
   },
   {
-    segment: calculatePath(lang),
+    segment: calculateSegment(lang),
     title: "背景设置",
     icon: <Image />,
   },
   {
-    segment: calculatePath(lang, "quotes"),
+    segment: calculateSegment(lang, "quotes"),
     title: "每日一言",
     icon: <FormatQuote />,
   },
@@ -77,35 +57,9 @@ const DashboardToolbar = () => {
   return <ModeToggle />;
 };
 
-export const RootRoute = () => {
+export const MuiLayout = () => {
   const theme = useTheme();
-  const params = useParams();
-  const location = useLocation();
   const navigation = useNavigation();
-  const langInStore = useSyncStore((s) => s.lang);
-
-  const langInParams = params.lang;
-  const language = calculateLanguage(langInParams, langInStore);
-
-  React.useEffect(() => {
-    useSyncStore.setState((darft) => {
-      darft.lang = language;
-    });
-  }, [language]);
-
-  if (language !== langInParams) {
-    return (
-      <Navigate
-        to={{
-          pathname: `/${language + location.pathname}`,
-          search: location.search,
-          hash: location.hash,
-        }}
-        state={location.state}
-        replace
-      />
-    );
-  }
 
   return (
     <ReactRouterAppProvider

@@ -11,10 +11,10 @@ import {
 } from "react-router";
 import React from "react";
 import { FullScreenProgress } from "@/components/FullScreenProgress";
-import { RootRoute } from "./root";
+import { MuiLayout } from "./layout";
 
 const DEFAULT_LANG = "en";
-const LOCALES = new Set(["en", "zh"]);
+const LOCALES = new Set([DEFAULT_LANG, "zh"]);
 
 const calculateLocale = (fallbackLocale: string, localeSegment: string) => {
   if (LOCALES.has(localeSegment)) {
@@ -100,6 +100,10 @@ const LangRoute = () => {
   );
 };
 
+const RootRoute = () => {
+  return <Outlet />;
+};
+
 const createRoutes = (): RouteObject[] => {
   return [
     {
@@ -161,26 +165,31 @@ const createRoutes = (): RouteObject[] => {
           Component: LangRoute,
           children: [
             {
-              path: "*",
-              Component: () => {
-                return (
-                  <Link
-                    to={{
-                      pathname: "/",
-                    }}
-                  >
-                    Take me home
-                  </Link>
-                );
-              },
-            },
-            {
-              index: true,
-              lazy: () => import("./home"),
-            },
-            {
-              path: "quotes",
-              lazy: () => import("./quotes"),
+              Component: MuiLayout,
+              children: [
+                {
+                  path: "*",
+                  Component: () => {
+                    return (
+                      <Link
+                        to={{
+                          pathname: "/",
+                        }}
+                      >
+                        Take me home
+                      </Link>
+                    );
+                  },
+                },
+                {
+                  index: true,
+                  lazy: () => import("./home"),
+                },
+                {
+                  path: "quotes",
+                  lazy: () => import("./quotes"),
+                },
+              ],
             },
           ],
         },
